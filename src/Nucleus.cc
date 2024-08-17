@@ -183,14 +183,14 @@ double Nucleus::CalculateMixingRatio(int ni, int nf) const {
 
 double Nucleus::CompareLifetime(const LitVal* lv) const {
   
-  double tau =  CalculateLifetime(lv->GetInitialIndex());
+  double tau = CalculateLifetime(lv->GetInitialIndex());
   return lv->Compare(tau);
 
 }
 
 double Nucleus::CompareBranchingRatio(const LitVal* lv) const {
   
-  double br =  CalculateBranchingRatio(lv->GetInitialIndex(),lv->GetFinalIndex(),
+  double br = CalculateBranchingRatio(lv->GetInitialIndex(),lv->GetFinalIndex(),
 				       lv->GetFinalIndexTwo()); 
   return lv->Compare(br);
 
@@ -198,7 +198,7 @@ double Nucleus::CompareBranchingRatio(const LitVal* lv) const {
 
 double Nucleus::CompareMixingRatio(const LitVal* lv) const {
   
-  double mx =  CalculateMixingRatio(lv->GetInitialIndex(),lv->GetFinalIndex()); 
+  double mx = CalculateMixingRatio(lv->GetInitialIndex(),lv->GetFinalIndex()); 
   return lv->Compare(mx);
 
 }
@@ -334,12 +334,13 @@ int Nucleus::GetNumFree() const {
   return num;
 }
 
-void Nucleus::CreateFromGosiaInputFile() {
+void Nucleus::CreateFromGosiaInputFile(std::string file_name) {
   
   levels.clear();
   matrix_elements.clear();
   
-  std::ifstream inFile((name+".POIN.inp").c_str());
+  //std::ifstream inFile((name+".POIN.inp").c_str());
+  std::ifstream inFile(file_name.c_str());
   if(!inFile.is_open()) {
     std::cout << "Could not open Gosia input file " << name+".POIN.inp" << "!" << std::endl;
     return;
@@ -374,13 +375,6 @@ void Nucleus::CreateFromGosiaInputFile() {
     levels.push_back(lvl);
     
   }
-  
-  /*
-  std::string flag = " 0 0 0 0";
-  if(!gosi)
-    flag = " 0 0";
-  std::string end = flag + " 0";
-  */
   
   std::string flag, end;
   if(gosi) {
@@ -438,12 +432,12 @@ void Nucleus::CreateFromGosiaInputFile() {
   return;
 }
 
-void Nucleus::CreateFromGosiaOutputFile() {
+void Nucleus::CreateFromGosiaOutputFile(std::string file_name) {
 
   levels.clear();
   matrix_elements.clear();
   
-  std::ifstream inFile((name + ".out").c_str());
+  std::ifstream inFile(file_name);
   if(!inFile.is_open()) {
     std::cout << "Could not open Gosia output file " << name + ".out" << "!" << std::endl;
     return;
@@ -537,9 +531,9 @@ void Nucleus::CreateFromGosiaOutputFile() {
   return;
 }
 
-void Nucleus::FillFromBSTFile() {
+void Nucleus::FillFromBSTFile(std::string file_name) {
   
-  std::ifstream inFile((name + ".bst").c_str());
+  std::ifstream inFile(file_name);
   if(!inFile.is_open()) {
     std::cout << "Could not open Gosia file " << name+".bst" << "!" << std::endl;
     return;
@@ -568,6 +562,21 @@ void Nucleus::FillFromBSTFile() {
     
   }
 
+  return;
+}
+
+void Nucleus::FillFromBSTFile() {
+  FillFromBSTFile(name + ".bst");
+  return;
+}
+
+void Nucleus::CreateFromGosiaInputFile() {
+  CreateFromGosiaInputFile(name + ".POIN.inp");
+  return;
+}
+
+void Nucleus::CreateFromGosiaOutputFile() {
+  CreateFromGosiaOutputFile(name + ".POIN.out");
   return;
 }
 

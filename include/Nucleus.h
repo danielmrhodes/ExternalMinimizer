@@ -15,6 +15,10 @@ class Nucleus {
   Nucleus(std::string nm);
   ~Nucleus();
   
+  void CreateFromGosiaOutputFile(std::string file_name);
+  void CreateFromGosiaInputFile(std::string file_name);
+  void FillFromBSTFile(std::string file_name);
+
   void CreateFromGosiaOutputFile();
   void CreateFromGosiaInputFile();
   void FillFromBSTFile();

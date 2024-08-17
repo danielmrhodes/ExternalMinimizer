@@ -20,6 +20,8 @@ class ExperimentalData {
   void SetScalings(std::vector<double> scls) {scalings = scls;}
   void RunGosiaCommands();
   void ReadGosiaFiles();
+  
+  void ReadDataFile(std::string file_name);
   void ReadDataFile();
   void Correct();
   void RecorrectExp(int exp, double scale);
@@ -33,9 +35,12 @@ class ExperimentalData {
   void PrintAllYields() const;
 
   friend class GosiaMinimizerFCN;
-  //friend class GosiaMinimizer;
   
  private:
+
+  void CreateFromGosiaInput(std::string file_name);
+  void FillFromIntiOutput(std::string file_name, bool create = false);
+  void FillFromPoinOutput(std::string file_name, bool create = false);
 
   void CreateFromGosiaInput();
   void FillFromIntiOutput(bool create = false);

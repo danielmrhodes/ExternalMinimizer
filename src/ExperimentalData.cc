@@ -42,8 +42,13 @@ void ExperimentalData::ReadGosiaFiles() {
 }
 
 void ExperimentalData::ReadDataFile() {
+  ReadDataFile(name+".yld");
+  return;
+}
 
-  std::ifstream file((name+".yld").c_str());
+void ExperimentalData::ReadDataFile(std::string file_name) {
+
+  std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
     std::cout << "Could not open data file " << name+".yld" << "!" << std::endl;
     return;
@@ -108,8 +113,13 @@ void ExperimentalData::ReadDataFile() {
 }
 
 void ExperimentalData::CreateFromGosiaInput() {
+  CreateFromGosiaInput(name+".POIN.inp");
+  return;
+}
 
-  std::ifstream file((name+".POIN.inp").c_str());
+void ExperimentalData::CreateFromGosiaInput(std::string file_name) {
+
+  std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
     std::cout << "Could not open Gosia file " << name+".POIN.inp" << "!" << std::endl;
     return;
@@ -173,8 +183,13 @@ void ExperimentalData::CreateFromGosiaInput() {
 }
 
 void ExperimentalData::FillFromIntiOutput(bool create) {
+  FillFromIntiOutput(name+".INTI.out",create);
+  return;
+}
+
+void ExperimentalData::FillFromIntiOutput(std::string file_name, bool create) {
   
-  std::ifstream file((name+".INTI.out").c_str());
+  std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
     std::cout << "Could not open Gosia output file " << name+".INTI.out" << "!" 
 	      << std::endl;
@@ -280,8 +295,13 @@ void ExperimentalData::FillFromIntiOutput(bool create) {
 }
 
 void ExperimentalData::FillFromPoinOutput(bool create) {
+  FillFromPoinOutput(name+".POIN.out",create);
+  return;
+}
 
-  std::ifstream file((name+".POIN.out").c_str());
+void ExperimentalData::FillFromPoinOutput(std::string file_name, bool create) {
+
+  std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
     std::cout << "Could not open Gosia output file " << name+".POIN.out" << "!" << std::endl;
     return;

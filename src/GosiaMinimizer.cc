@@ -14,6 +14,7 @@ GosiaMinimizer::GosiaMinimizer(std::string meth, std::string alg) {
 
   write = false;
   calc_unc = false;
+  limited = false;
   
   SetMethod(meth);
   SetAlgorithm(alg);
@@ -102,8 +103,10 @@ void GosiaMinimizer::SetupParameters(std::vector<double> scales) {
     double llim = me->GetLowerLimit();    
     double st = TMath::Abs(val/1000.0);
     
-    mini->SetLimitedVariable(par_num,Form("beamME%02d",i+1),val,st,llim,ulim);
-    //mini->SetVariable(par_num,Form("beamME%02d",i+1),val,st);
+    if(limited)
+      mini->SetLimitedVariable(par_num,Form("beamME%02d",i+1),val,st,llim,ulim);
+    else
+      mini->SetVariable(par_num,Form("beamME%02d",i+1),val,st);
     ++par_num;
     
   }
@@ -122,8 +125,10 @@ void GosiaMinimizer::SetupParameters(std::vector<double> scales) {
       double llim = me->GetLowerLimit();    
       double st = TMath::Abs(val/1000.0);
       
-      mini->SetLimitedVariable(par_num,Form("targ%dME%02d",i+1,j+1),val,st,llim,ulim);
-      //mini->SetVariable(par_num,Form("targ%dME%02d",i+1,j+1),val,st);
+      if(limited)
+	mini->SetLimitedVariable(par_num,Form("targ%dME%02d",i+1,j+1),val,st,llim,ulim);
+      else
+	mini->SetVariable(par_num,Form("targ%dME%02d",i+1,j+1),val,st);
       ++par_num;
       
     }

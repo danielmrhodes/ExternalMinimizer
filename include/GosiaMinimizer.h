@@ -17,7 +17,8 @@ class GosiaMinimizer {
   void Minimize();
   void CalculateFullUncertainty() {calc_unc = true;}
   void WriteParameterSpace() {write = true;}
-
+  void LimitMatrixElements() {limited = true;}
+  
   void Print() const {mini->PrintResults();}
   
   void SetMaximumIterations(int max) {maxIter = max;}
@@ -48,6 +49,7 @@ class GosiaMinimizer {
   std::vector<double> FindInitialScalings();
   void UpdateScalings();
 
+  bool limited; //flag for applying upper and lower limits to free MEs
   bool calc_unc;
   bool write;
 

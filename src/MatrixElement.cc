@@ -1,4 +1,5 @@
 #include "MatrixElement.h"
+#include <iostream>
 
 MatrixElement::MatrixElement() {
 
@@ -8,6 +9,76 @@ MatrixElement::MatrixElement() {
 
 }
 MatrixElement::~MatrixElement() {;}
+
+std::string MatrixElement::GetMultS(int lval) {
+
+  switch(lval) {
+
+  case 1:
+    return "E1";
+
+  case 2:
+    return "E2";
+
+  case 3:
+    return "E3";
+  
+  case 4:
+    return "E4";
+
+  case 5:
+    return "E5";
+
+  case 6:
+    return "E6";
+
+  case 7:
+    return "M1";
+
+  case 8:
+    return "M2";
+    
+  }
+
+  std::cout << "Unknown multipolarity: " << lval << std::endl; 
+
+  return "??";
+}
+
+std::string MatrixElement::GetMultS() const {
+
+  switch(mult) {
+
+  case 1:
+    return "E1";
+
+  case 2:
+    return "E2";
+
+  case 3:
+    return "E3";
+  
+  case 4:
+    return "E4";
+
+  case 5:
+    return "E5";
+
+  case 6:
+    return "E6";
+
+  case 7:
+    return "M1";
+
+  case 8:
+    return "M2";
+    
+  }
+
+  std::cout << "Unknown multipolarity: " << mult << std::endl; 
+
+  return "??";
+}
 
 bool MatrixElement::Compare(const MatrixElement* me1, const MatrixElement* me2) {
 

@@ -1,29 +1,36 @@
 #include "ExperimentalData.h"
 #include "TMath.h"
+#include "TRandom3.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 
-ExperimentalData::ExperimentalData(std::string nm) : name(nm) {;}
+ExperimentalData::ExperimentalData(std::string nm) : name(nm), nrm_index(-1) {;}
 ExperimentalData::~ExperimentalData() {
 
   for(Experiment* exp : data)
     delete exp;
-
+  data.clear();
+  
   return;
 }
 
 void ExperimentalData::ReadGosiaFiles() {
+  ReadGosiaFiles(name+".POIN.inp",name+".POIN.out",name+".INTI.out");
+  return;
+}
 
-  CreateFromGosiaInput();
+void ExperimentalData::ReadGosiaFiles(std::string poin_inp, std::string poin_out, std::string inti_out) {
+
+  CreateFromGosiaInput(poin_inp);
   if(data.size() == 0) {
     std::cout << "Did not create any experiments for " << name << "!" << std::endl;
     return;
   }
   
-  FillFromIntiOutput(true);
-  FillFromPoinOutput(true);
+  FillFromIntiOutput(inti_out,true);
+  FillFromPoinOutput(poin_out,true);
 
   int size0 = data.at(0)->GetTotalSize();
   for(Experiment* exp : data) {
@@ -50,7 +57,7 @@ void ExperimentalData::ReadDataFile(std::string file_name) {
 
   std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
-    std::cout << "Could not open data file " << name+".yld" << "!" << std::endl;
+    std::cout << "Could not open data file " << file_name << "!" << std::endl;
     return;
   }
 
@@ -112,6 +119,211 @@ void ExperimentalData::ReadDataFile(std::string file_name) {
   return;
 }
 
+void ExperimentalData::GenerateData(Nucleus* nuc, TF1* f, double scale) {
+  GenerateData(name+".sim",nuc,f,scale);
+  return;
+}
+
+void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* eff_curve, double scale) {
+  
+  std::ifstream file(file_name.c_str());
+  if(!file.is_open()) {
+    std::cout << "Could not open file " << file_name << "!" << std::endl;
+    return;
+  }
+
+  for(Experiment* exp : data)
+    exp->ClearRawData();
+
+  TRandom3 rand;
+
+  int index = 0;
+  std::string line, word;
+  while(std::getline(file,line)) {
+    if(line.empty())
+      break;
+
+    Experiment* exp = data.at(index);
+
+    int num_y;
+    double weight;
+    std::stringstream ss(line);
+    ss >> num_y >> weight;
+
+    for(int i=0;i<num_y;++i) {
+      std::getline(file,line);
+     
+      int indsI, indsF;
+      double yl, er;
+
+      std::stringstream ss1(line);
+      ss1 >> indsI >> indsF;
+
+      YieldError* yldD = new YieldError();
+      yldD->SetWeight(weight);      
+
+      if(indsI < 100) {
+       
+	double egam = 1000.0*(nuc->GetLevelEnergy(indsI) - nuc->GetLevelEnergy(indsF));
+	double eff = eff_curve->Eval(egam); 
+
+	Yield* yldI = exp->GetIntiYield(indsI-1,indsF-1);
+	double yl = scale*yldI->GetValue()*eff;
+	
+	double ydat = rand.PoissonD(yl);
+	double err = TMath::Sqrt(ydat);
+
+	ydat /= eff;
+	err /= eff;	
+
+	yldD->AddInitialIndex(indsI-1);
+        yldD->AddFinalIndex(indsF-1);
+	yldD->SetValue(ydat);
+	yldD->SetErrorUp(err);
+	yldD->SetErrorDown(err);
+
+      }
+      else {
+
+        int ni1 = indsI%100;
+        int ni2 = indsI/100;
+        int nf1 = indsF%100;
+        int nf2 = indsF/100;
+
+	double egam1 = 1000.0*(nuc->GetLevelEnergy(ni1) - nuc->GetLevelEnergy(nf1));
+	double eff1 = eff_curve->Eval(egam1);
+	
+	Yield* yldI1 = exp->GetIntiYield(ni1-1,nf1-1);
+        double y1 = scale*yldI1->GetValue()*eff1;        
+
+	double ydat1 = rand.PoissonD(y1);
+	double err1 = TMath::Sqrt(ydat1);
+
+	ydat1 /= eff1;
+        err1 /= eff1;
+	
+	double egam2 = 1000.0*(nuc->GetLevelEnergy(ni2) - nuc->GetLevelEnergy(nf2));
+	double eff2 = eff_curve->Eval(egam2);
+
+	Yield* yldI2 = exp->GetIntiYield(ni2-1,nf2-1);
+        double y2 = scale*yldI2->GetValue()*eff2;
+	
+	double ydat2 = rand.PoissonD(y2);
+	double err2 = TMath::Sqrt(ydat2);
+	
+	ydat2 /= eff2;
+        err2 /= eff2;
+
+	double val = ydat1 + ydat2;
+	double err = TMath::Sqrt(err1*err1 + err2*err2);
+	
+        yldD->AddInitialIndex(ni1-1);
+        yldD->AddFinalIndex(nf1-1);
+        yldD->AddInitialIndex(ni2-1);
+        yldD->AddFinalIndex(nf2-1);
+
+	yldD->SetValue(val);
+        yldD->SetErrorUp(err);
+        yldD->SetErrorDown(err);
+
+      }
+
+      exp->AddRawData(yldD);
+       
+    } //End loop over one experiment's yields
+    	
+    ++index;
+  } //End loop over all experiments
+
+  return;
+}
+
+void ExperimentalData::GenerateAllData(Nucleus* nuc, TF1* eff_curve, double scale) {
+ 
+  TRandom3 rand;
+  for(Experiment* exp : data) {
+    exp->ClearRawData();
+  
+    for(Yield* yldI : exp->GetAllIntiYields()) {
+
+      std::vector<int> indsI = yldI->GetInitialIndices();
+      std::vector<int> indsF = yldI->GetFinalIndices();
+      int ni = indsI.at(0);
+      int nf = indsF.at(0);
+
+      double egam = 1000.0*(nuc->GetLevelEnergy(ni) - nuc->GetLevelEnergy(nf));
+      double eff = eff_curve->Eval(egam);
+      
+      double yl = scale*yldI->GetValue()*eff;
+      double ydat = rand.PoissonD(yl);
+      double err = TMath::Sqrt(ydat);
+
+      ydat /= eff;
+      err /= eff;
+
+      YieldError* yldD = new YieldError();
+      yldD->AddInitialIndex(ni);
+      yldD->AddFinalIndex(nf);
+      yldD->SetValue(ydat);
+      yldD->SetErrorUp(err);
+      yldD->SetErrorDown(err);
+      yldD->SetWeight(1.0);
+    
+      exp->AddRawData(yldD);
+    } //End loop over inti yields  
+  } //End loop over experiments
+  
+  return;
+}
+
+void ExperimentalData::WriteDataFile(int A, int Z) {
+  WriteDataFile(name+".yld",A,Z);
+  return;
+}
+
+void ExperimentalData::WriteDataFile(std::string file_name, int A, int Z) {
+  
+  std::ofstream file(file_name.c_str());
+  if(!file.is_open()) {
+    std::cout << "Could not open file " << file_name << "!" << std::endl;
+    return;
+  } 
+  
+  for(Experiment* exp : data) {
+    
+    int num = exp->GetNumber();
+    int en = 0.5*(exp->GetEnergyMax() + exp->GetEnergyMin());
+    int num_y = exp->GetRawData().size();
+
+    file << num << " " << 1 << " " << Z << " " << A << " " << en << " " << num_y << " " << 1.0 << "\n";
+    for(YieldError* yldR : exp->GetRawData()) {
+
+      std::vector<int> indsI = yldR->GetInitialIndices();
+      std::vector<int> indsF = yldR->GetFinalIndices();
+
+      int ni = indsI.at(0);
+      int nf = indsF.at(0);
+      if(indsI.size() > 1) {
+
+        ni *= 100;
+	nf *= 100;
+	ni += indsI.at(1);
+	nf += indsF.at(1);
+
+      }
+
+      double val = yldR->GetValue();
+      double err = 0.5*(yldR->GetErrorUp() + yldR->GetErrorDown());
+
+      file << ni+1 << " " << nf+1 << " " << val << " " << err << "\n";
+
+    }
+
+  }
+
+  return;
+}
+
 void ExperimentalData::CreateFromGosiaInput() {
   CreateFromGosiaInput(name+".POIN.inp");
   return;
@@ -121,13 +333,13 @@ void ExperimentalData::CreateFromGosiaInput(std::string file_name) {
 
   std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
-    std::cout << "Could not open Gosia file " << name+".POIN.inp" << "!" << std::endl;
+    std::cout << "Could not open Gosia file " << file_name << "!" << std::endl;
     return;
   }
 
   for(Experiment* exp : data)
     delete exp;
-  
+  data.clear();
   scalings.clear();
   factors.clear();
   
@@ -191,7 +403,7 @@ void ExperimentalData::FillFromIntiOutput(std::string file_name, bool create) {
   
   std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
-    std::cout << "Could not open Gosia output file " << name+".INTI.out" << "!" 
+    std::cout << "Could not open Gosia output file " << file_name << "!" 
 	      << std::endl;
     return;
   }
@@ -303,7 +515,7 @@ void ExperimentalData::FillFromPoinOutput(std::string file_name, bool create) {
 
   std::ifstream file(file_name.c_str());
   if(!file.is_open()) {
-    std::cout << "Could not open Gosia output file " << name+".POIN.out" << "!" << std::endl;
+    std::cout << "Could not open Gosia output file " << file_name << "!" << std::endl;
     return;
   }
 
@@ -384,7 +596,10 @@ void ExperimentalData::FillFromPoinOutput(std::string file_name, bool create) {
 void ExperimentalData::DeriveCorrectionFactors() {
 
   const int size = data.at(0)->GetTotalSize();
-  const double scale = data.at(0)->GetAllIntiYields().at(size-1)->GetValue() / data.at(0)->GetAllPointYields().at(size-1)->GetValue();
+  if(nrm_index < 0)
+    nrm_index = size-1;
+
+  const double scale = data.at(0)->GetAllIntiYields().at(nrm_index)->GetValue() / data.at(0)->GetAllPointYields().at(nrm_index)->GetValue();
   
   for(Experiment* exp : data) {
     
@@ -404,7 +619,10 @@ void ExperimentalData::DeriveCorrectionFactors() {
 void ExperimentalData::Correct() {
 
   const int sizeT = data.at(0)->GetTotalSize();
-  double scale = data.at(0)->GetAllIntiYields().at(sizeT-1)->GetValue() / data.at(0)->GetAllPointYields().at(sizeT-1)->GetValue();
+  if(nrm_index < 0)
+    nrm_index = sizeT-1;
+
+  double scale = data.at(0)->GetAllIntiYields().at(nrm_index)->GetValue() / data.at(0)->GetAllPointYields().at(nrm_index)->GetValue();
 
   for(Experiment* exp : data) {
 

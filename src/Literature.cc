@@ -31,8 +31,8 @@ LitVal::LitVal(int indI, int indF1, int indF2, double val, double erU, double er
 }
 
 double LitVal::Compare(double calc) const{
-
-  double diff = GetValue() - calc;
+  
+  double diff = value - calc;
   if(diff > 0.0)
     return TMath::Power(diff/GetErrorDown(),2.0);
 
@@ -41,8 +41,8 @@ double LitVal::Compare(double calc) const{
 }
 
 double LitVal::NSigma(double calc) const{
-
-  double diff = GetValue() - calc;
+  
+  double diff = value - calc;
   if(diff > 0.0)
     return diff/GetErrorDown();
 
@@ -62,15 +62,19 @@ Literature::~Literature() {
 
   for(LitVal* lv : lifetimes)
     delete lv;
+  lifetimes.clear();
 
   for(LitVal* lv : branching_ratios)
     delete lv;
+  branching_ratios.clear();
 
   for(LitVal* lv : mixing_ratios)
     delete lv;
+  mixing_ratios.clear();
 
   for(LitVal* lv : matrix_elements)
     delete lv;
+  matrix_elements.clear();
 
   return;
 }

@@ -1,6 +1,8 @@
 #ifndef MatrixElement_h
 #define MatrixElement_h 1
 
+#include <string>
+
 class MatrixElement {
 
  public:
@@ -13,6 +15,7 @@ class MatrixElement {
   int GetIndex1() const {return index1;}
   int GetIndex2() const {return index2;}
   int GetMultipolarity() const {return mult;}
+  std::string GetMultS() const;
   double GetValue() const {return value;}
   double GetUpperLimit() const {return ulim;}
   double GetLowerLimit() const {return llim;}
@@ -27,6 +30,7 @@ class MatrixElement {
   void SetUpperLimit(double lim) {ulim = lim;}
   void SetLowerLimit(double lim) {llim = lim;}
 
+  static std::string GetMultS(int l);
   static bool Compare(const MatrixElement* me1, const MatrixElement* me2);
   
  private:

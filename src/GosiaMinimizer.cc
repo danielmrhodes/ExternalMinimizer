@@ -10,6 +10,7 @@ GosiaMinimizer::GosiaMinimizer(std::string meth, std::string alg) {
   chi_cut = 1.0;
   maxIter = 50000;
   maxCalls = 50000;
+  numTrys = 5;
   fitTol = 0.1;
 
   write = false;
@@ -169,14 +170,15 @@ void GosiaMinimizer::LinkBeamExperiments(int exp1, int exp2, double rel) {
 void GosiaMinimizer::LinkBeamTargetExperiments(int exp1B, int numE, int target_num) {
 
   ExperimentalData* dataB = theFCN->beam_data;
+  int nrm_index = dataB->GetNormalizationIndex();
 
   int first_targ_exp = dataB->Size() + 1;
   for(int i=0;i<target_num-1;++i)
     first_targ_exp += theFCN->target_data[i]->Size();
 
-  int sizeT = dataB->GetExperiment(exp1B)->GetTotalSize();
-  double scale0 = dataB->GetExperiment(exp1B)->GetAllIntiYields().at(sizeT-1)->GetValue() / 
-    dataB->GetExperiment(exp1B)->GetAllPointYields().at(sizeT-1)->GetValue();
+  //int sizeT = dataB->GetExperiment(exp1B)->GetTotalSize();
+  double scale0 = dataB->GetExperiment(exp1B)->GetAllIntiYields().at(nrm_index)->GetValue() / 
+    dataB->GetExperiment(exp1B)->GetAllPointYields().at(nrm_index)->GetValue();
   
   for(int i=0;i<numE;++i) {
     
@@ -268,6 +270,8 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
 
   tmp_mini->Minimize();
   const double* x = tmp_mini->X();
+  std::cout << "\nInitial Chi2: " << tmp_mini->MinValue();
+  
 
   //Record scaling parameters for future use
   std::vector<double> pars;
@@ -346,7 +350,7 @@ void GosiaMinimizer::Minimize() {
 
   int status = 3;
   int count = 0;
-  while(count < 5 && status == 3) {
+  while(count < numTrys && status != 0) {
     mini->Minimize();
     status = mini->Status();
     ++count;
@@ -398,19 +402,25 @@ void GosiaMinimizer::Minimize() {
     for(int i=0;i<numF;++i) {
 
       double eU, eD;
-      mini->GetMinosError(i,eD,eU);
-
+      int countM = 0;
+      while(countM < 2) {
+	if(mini->GetMinosError(i,eD,eU))
+	  break;
+	++countM;
+      }
+      
       double val = mini->X()[i];
       std::string name = mini->VariableName(i);
 
       std::cout << name << ": " << val << " +" << eU << " " << eD << std::endl;
       minosFile << name << ": " << val << " +" << eU << " " << eD << "\n";
-    } 
+    }
     
     minosFile.close();
-    
+    beam->FillFromBSTFile(theFCN->beam_name + ".bst-minimized"); //Reset MEs to minimum   
+  
   }
-
+  
   if(write) {
     
     TNtuple* tpl = theFCN->ntuple;
@@ -420,7 +430,7 @@ void GosiaMinimizer::Minimize() {
       outFile->Close();
     }
   }
-  
+ 
   if(theFCN->beam_data)
     UpdateScalings();
   

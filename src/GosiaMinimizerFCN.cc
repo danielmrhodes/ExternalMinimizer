@@ -241,7 +241,7 @@ void GosiaMinimizerFCN::FillFactors() {
   
   if(!beam_data) 
     return; 
-
+  
   factors.clear();
   Kinematics kin;
     

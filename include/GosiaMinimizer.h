@@ -23,6 +23,7 @@ class GosiaMinimizer {
   
   void SetMaximumIterations(int max) {maxIter = max;}
   void SetMaximumCalls(int max) {maxCalls = max;}
+  void SetNumTrys(int num) {numTrys = num;}
   void SetFitTolerance(double tol) {fitTol = tol;}
   void SetChi2Cut(double cut) {chi_cut = cut; theFCN->chi_cut = cut;}
   
@@ -55,9 +56,10 @@ class GosiaMinimizer {
 
   int maxIter;
   int maxCalls;
+  int numTrys;
   double fitTol;
   double chi_cut;
-  
+
   GosiaMinimizerFCN* theFCN;
   
   std::string method;

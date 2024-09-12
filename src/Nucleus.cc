@@ -1,6 +1,7 @@
 #include "Nucleus.h"
 #include "TMath.h"
 #include "TString.h"
+#include "Math/SpecFuncMathMore.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -10,11 +11,14 @@ Nucleus::Nucleus(std::string nm) {
   
   name = nm;
   
-  std::vector<double> ens = {0.01,0.02,1.0,3.5,4.0};
+  std::vector<double> ens = {0.01,0.015,1.0,5.5,6.0};
   std::vector<double> ccs = {0.0,0.0,0.0,0.0,0.0};
 
-  for(int i=0;i<8;++i)
-    convCoeffs[i] = new TSpline3(Form("CC%d",i+1),&ens[0],&ccs[0],5);
+  for(int i=0;i<8;++i) {
+    convCoeffs[i] = new TGraph(5,&ens[0],&ccs[0]);
+    convCoeffs[i]->SetName(Form("CC%d",i+1));
+    convCoeffs[i]->SetTitle(Form("CC%d",i+1));
+  }
 
   return;
 
@@ -24,13 +28,15 @@ Nucleus::~Nucleus() {
 
   for(MatrixElement* me : matrix_elements)
     delete me;
+  matrix_elements.clear();
 
   for(Level* lvl : levels)
     delete lvl;
+  levels.clear();
 
-  for(int i=0;i<8;++i)
-    delete convCoeffs[i];
-
+  for(TGraph* g : convCoeffs)
+    delete g;
+  
   return;
 
 }
@@ -83,18 +89,14 @@ double Nucleus::CalculateLifetime(int index) const {
       continue;
     
     double egam = levels[n2]->GetEnergy() - levels[n1]->GetEnergy();
+    double val = me->GetValue();
     int mult = me->GetMultipolarity();
-    
-    if(n2 == index && egam > 0.0) {  
-      
-      double cc = convCoeffs[mult-1]->Eval(egam);
-      sum += (cc + 1.0)/DecayLifetime(mult,me->GetValue(),levels[n2]->GetSpin(),egam);
-    }
-    else if(n1 == index && egam < 0.0) {
-      
-      double cc = convCoeffs[mult-1]->Eval(-egam);
-      sum += (cc + 1.0)/DecayLifetime(me->GetMultipolarity(),me->GetValue(),levels[n1]->GetSpin(),-egam);
-    }
+    double cc = convCoeffs[mult-1]->Eval(std::abs(egam));
+
+    if(n2 == index && egam > 0.0)
+      sum += (cc + 1.0)/DecayLifetime(mult,val,levels[n2]->GetSpin(),egam);
+    else if(n1 == index && egam < 0.0)
+      sum += (cc + 1.0)/DecayLifetime(mult,val,levels[n1]->GetSpin(),-egam);
 
   }
   
@@ -113,8 +115,14 @@ double Nucleus::CalculateBranchProbability(int ni, int nf) const {
     
     int n1 = me->GetIndex1();
     int n2 = me->GetIndex2();
-    if((ni == n1 && nf == n2) || (ni == n2 && nf == n1))
-      sum += 1.0/DecayLifetime(me->GetMultipolarity(),me->GetValue(),levels[ni]->GetSpin(),egam);
+    if((ni == n1 && nf == n2) || (ni == n2 && nf == n1)) {
+
+      int mult = me->GetMultipolarity();
+      double cc = convCoeffs[mult-1]->Eval(egam);
+      
+      sum += (cc + 1.0)/DecayLifetime(mult,me->GetValue(),levels[ni]->GetSpin(),egam);
+
+    }
   
   }
 
@@ -132,17 +140,29 @@ double Nucleus::CalculateBranchingRatio(int ni, int nf1, int nf2) const {
   if(egam2 < 0.0)
     return 0.0;
   
+  double spin = levels[ni]->GetSpin();
   double sum1 = 0.0;
   double sum2 = 0.0;
+  
   for(MatrixElement* me : matrix_elements) {
 
     int n1 = me->GetIndex2();
     int n2 = me->GetIndex1();
-   
-    if((ni == n1 && nf1 == n2) || (ni == n2 && nf1 == n1))
-      sum1 += 1.0/DecayLifetime(me->GetMultipolarity(),me->GetValue(),levels[ni]->GetSpin(),egam1);
-    else if((ni == n1 && nf2 == n2) || (ni == n2 && nf2 == n1))
-      sum2 += 1.0/DecayLifetime(me->GetMultipolarity(),me->GetValue(),levels[ni]->GetSpin(),egam2);
+    int mult = me->GetMultipolarity();
+    
+    if((ni == n1 && nf1 == n2) || (ni == n2 && nf1 == n1)) {
+
+      
+      double cc = convCoeffs[mult-1]->Eval(egam1);
+      sum1 += (cc + 1.0)/DecayLifetime(mult,me->GetValue(),spin,egam1);
+      
+    }
+    else if((ni == n1 && nf2 == n2) || (ni == n2 && nf2 == n1)) {
+      
+      double cc = convCoeffs[mult-1]->Eval(egam2);
+      sum2 += (cc + 1.0)/DecayLifetime(mult,me->GetValue(),spin,egam2);
+      
+    }
   }
 
   return sum1/sum2;
@@ -174,10 +194,32 @@ double Nucleus::CalculateMixingRatio(int ni, int nf) const {
     
   }
 
-  if(std::abs(valE2) < 1E-10 || std::abs(valM1) < 1E-10)
+  if(std::abs(valE2) < 1E-18 || std::abs(valM1) < 1E-18)
     return 0.0;
 
   return 0.835*egam*valE2/valM1;
+
+}
+
+std::vector<int> Nucleus::GetTransitionMultipolarities(int ni, int nf) const {
+
+  std::vector<int> lvals;
+  if(ni == nf)
+    return lvals;
+  
+  if(levels[ni]->GetEnergy() < levels[nf]->GetEnergy())
+    return lvals;
+
+  for(MatrixElement* me : matrix_elements) {
+
+    int n1 = me->GetIndex1();
+    int n2 = me->GetIndex2();
+    if((ni == n1 && nf == n2) || (ni == n2 && nf == n1))
+      lvals.push_back(me->GetMultipolarity());
+    
+  }
+
+  return lvals;
 
 }
 
@@ -584,7 +626,7 @@ void Nucleus::SetConverionCoefficients(int mult, std::vector<double> ens, std::v
 
   int size = ens.size();
   if(size < 5) {
-    std::cout << "Give at least 5 spline points for conversion coefficients (Mult=" << mult << ")" << std::endl;
+    std::cout << "Give at least 5 points for conversion coefficients (Mult=" << mult << ")" << std::endl;
     return;
   }
 
@@ -595,11 +637,13 @@ void Nucleus::SetConverionCoefficients(int mult, std::vector<double> ens, std::v
     return;
   }
 
-  TSpline3* spline = convCoeffs[mult-1];
-  delete spline;
-  spline = NULL;
-  
-  convCoeffs[mult-1] = new TSpline3(Form("CC%d",mult),&ens[0],&ccs[0],size);
+  TGraph* g = convCoeffs[mult-1];
+  delete g;
+  g = NULL;
+
+  convCoeffs[mult-1] = new TGraph(size,&ens[0],&ccs[0]);
+  convCoeffs[mult-1]->SetName(Form("CC%d",mult));
+  convCoeffs[mult-1]->SetTitle(Form("CC%d",mult));
 
   return;
 }
@@ -670,7 +714,7 @@ void Nucleus::PrintBranchProbabilities() const {
   std::cout << "\nBranch Probabilities:\n";
   std::cout << std::setw(intw) << "ni" 
 	    << std::setw(intw) << "nf" 
-	    << "Prob\n";
+	    << "prob\n";
 
   int size = levels.size();
   for(int i=0;i<size;++i) {
@@ -682,7 +726,7 @@ void Nucleus::PrintBranchProbabilities() const {
       
       int nf = levels[size-j-1]->GetIndex();
       double prob = CalculateBranchProbability(ni,nf);
-      if(prob < 1E-10)
+      if(prob < 1E-18 || std::isnan(prob))
 	continue;
       
       std::cout << std::setw(intw) << ni+1  
@@ -705,7 +749,7 @@ void Nucleus::PrintBranchingRatios() const {
   std::cout << std::setw(intw) << "ni" 
 	    << std::setw(intw) << "nf1" 
 	    << std::setw(intw) << "nf2" 
-	    << "Ratio\n";
+	    << "ratio\n";
   
   int size = levels.size();
   for(int i=0;i<size;++i) {
@@ -722,7 +766,7 @@ void Nucleus::PrintBranchingRatios() const {
       
       int nf = levels.at(size-j-1)->GetIndex();
       double prob = CalculateBranchProbability(ni,nf);
-      if(prob < 1E-10)
+      if(prob < 1E-18)
 	continue;
 
       nfs.push_back(nf);
@@ -754,7 +798,7 @@ void Nucleus::PrintMixingRatios() const {
   std::cout << "\nMixing Ratios:\n";
   std::cout << std::setw(intw) << "ni" 
 	    << std::setw(intw) << "nf" 
-	    << "Value\n";
+	    << "value\n";
 
   int size = levels.size();
   for(int i=0;i<size;++i) {
@@ -764,7 +808,7 @@ void Nucleus::PrintMixingRatios() const {
       
       int nf = levels[size-j-1]->GetIndex();
       double del = CalculateMixingRatio(ni,nf);
-      if(std::abs(del) < 1E-10)
+      if(std::abs(del) < 1E-18)
 	continue;
       
       std::cout << std::setw(intw) << ni+1
@@ -777,6 +821,14 @@ void Nucleus::PrintMixingRatios() const {
 
 }
 
+double Nucleus::Moment(double dme, double spin, int mult) {
+  
+  int isp2 = int(2.0*spin + 0.001);
+  double w3j = ROOT::Math::wigner_3j(isp2,2*mult,isp2,-isp2,0,isp2);
+
+  return TMath::Sqrt(16.0*TMath::Pi()/5.0)*w3j*dme;
+}
+
 void Nucleus::PrintMatrixElements() const {
 
   int intw = 7;
@@ -784,10 +836,11 @@ void Nucleus::PrintMatrixElements() const {
 
   std::cout << std::left;
   std::cout << "\nMatrix Elements:\n";
-  std::cout << std::setw(intw) << "mult" 
-	    << std::setw(intw) << "n1" 
+  std::cout << std::setw(intw) << "n1" 
 	    << std::setw(intw) << "n2" 
-	    << "Value\n";
+	    << std::setw(intw) << "mult" 
+	    << std::setw(valw) << "value"
+	    << "BSL/Q\n";
   
   for(int i=0;i<matrix_elements.size();i++) {
     
@@ -795,14 +848,133 @@ void Nucleus::PrintMatrixElements() const {
     
     int n1 = me->GetIndex1();
     int n2 = me->GetIndex2();
-    int mult = me->GetMultipolarity();
+    int l = me->GetMultipolarity();
+    if(l == 7)
+      l=1;
+    if(l == 8)
+      l=2;
+
     double val = me->GetValue();
+    std::string mult = me->GetMultS();
 
-    std::cout << std::setw(intw) << mult
-	      << std::setw(intw) << n1+1
+    double en1 = levels[n1]->GetEnergy();
+    double en2 = levels[n2]->GetEnergy();
+    
+    double spin;
+    if(en1 - en2 > 0 || n1 == n2)
+      spin = levels[n1]->GetSpin();
+    else
+      spin = levels[n2]->GetSpin();
+    
+    double bsl_q;
+    if(n1 != n2)
+      bsl_q = val*val/(2.0*spin + 1.0);
+    else
+      bsl_q = Moment(val,spin,l);
+      
+    std::cout << std::setw(intw) << n1+1
 	      << std::setw(intw) << n2+1
-	      << std::setw(valw) << val<< "\n";
+	      << std::setw(intw) << mult
+	      << std::setw(valw) << val 
+	      << bsl_q << "\n";
 
+  }
+
+  return;
+}
+
+void Nucleus::PrintGammaTransitions() const {
+
+  int intw = 7;
+  int valw = 12;
+
+  std::cout << std::left;
+  std::cout << "\nGamma-Ray Transitions:\n";
+  std::cout << std::setw(intw) << "ni" 
+	    << std::setw(intw) << "nf" 
+	    << std::setw(valw) << "energy" 
+	    << std::setw(valw) << "mult" 
+	    << std::setw(valw) << "delta"
+	    << "cc\n";
+  
+  int size = levels.size();
+  for(int i=0;i<size;++i) {
+    
+    int ni = levels[size-i-1]->GetIndex();
+    double tau = CalculateLifetime(ni);
+    double spin = levels[size-i-1]->GetSpin();
+    double eni = levels[size-i-1]->GetEnergy();
+    
+    for(int j=0;j<size;++j) {
+      if(i==j)
+	continue;
+
+      int nf = levels[size-j-1]->GetIndex();
+      double enf = levels[size-j-1]->GetEnergy();
+      
+      double egam = eni - enf;
+      if(egam < 0.0)
+	continue;
+      
+      double prob = CalculateBranchProbability(ni,nf);
+      if(prob < 1E-18)
+	continue;
+      
+      std::vector<int> lvals = GetTransitionMultipolarities(ni,nf);
+      if(lvals.size() == 0)
+	continue;
+
+      std::vector<double> taups;
+      std::string mults;
+      int sign = 1;
+      
+      for(int l : lvals) {
+	
+	MatrixElement* me = GetMatrixElement(ni,nf,l);
+	mults += me->GetMultS() + " ";
+
+	double val = me->GetValue();
+	if(val < 0.)
+	  sign *= -1;
+
+	double taup = DecayLifetime(l,val,spin,egam);
+	taups.push_back(taup);
+
+      }
+      
+      double cc = convCoeffs[lvals.at(0)-1]->Eval(egam);
+      double del = 0.0;
+      
+      if(lvals.size() == 2) {
+	
+	int mult0 = lvals.at(0);
+	int mult1 = lvals.at(1);
+
+	for(int& l : lvals) {
+	  if(l == 7)
+	    l=1;
+	  if(l == 8)
+	    l=2;
+	}
+	
+	if(lvals.at(0) > lvals.at(1))
+	  del = sign*TMath::Sqrt(taups.at(1)/taups.at(0));
+	else
+	  del = sign*TMath::Sqrt(taups.at(0)/taups.at(1));
+
+	double frac0 = del*del/(1. + del*del);
+	double frac1 = 1./(1. + del*del);
+
+	cc = frac0*convCoeffs[mult0-1]->Eval(egam) + frac1*convCoeffs[mult1-1]->Eval(egam);
+      }
+      
+      std::cout << std::setw(intw) << ni+1
+		<< std::setw(intw) << nf+1
+		<< std::setw(valw) << 1000.*egam 
+		<< std::setw(valw) << mults
+		<< std::setw(valw) << del
+		<< cc << "\n";
+    }
   }
 
   return;
@@ -814,9 +986,10 @@ void Nucleus::PrintAll() const {
   PrintLifetimes();
   PrintBranchProbabilities();
   PrintBranchingRatios();
-  PrintMixingRatios();
+  //PrintMixingRatios();
   PrintMatrixElements();
-
+  PrintGammaTransitions();
+  
   return;
 }
 
@@ -958,6 +1131,111 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	      << std::setw(errw) << err
 	      << std::setw(errw) << nSig
 	      << chi2 << "\n";
+  }
+
+  return;
+}
+
+void Nucleus::Write(int A, int Z) const {
+  Write(name+".txt",A,Z);
+  return;
+}
+
+void Nucleus::Write(std::string file_name, int A, int Z) const {
+  
+  //This function writes a Cynus nucleus file
+  std::ofstream outFile(file_name.c_str());
+  
+  outFile << Z << "\t" << A << "\t" << levels.size() << "\t7\n";
+  for(Level* lvl : levels)
+    outFile << lvl->GetIndex() << "\t" << lvl->GetEnergy() << "\t" << lvl->GetSpin() << "\t" << lvl->GetParity() << "\n";
+  
+  for(MatrixElement* me : matrix_elements)
+    outFile << me->GetIndex1() << "\t" << me->GetIndex2() << "\t" << me->GetValue() << "\t\t" << me->GetMultS() << "\n";
+  
+  return;
+}
+
+void Nucleus::WriteLevelScheme() const {
+  WriteLevelScheme(name+".lvl");
+  return;
+}
+
+void Nucleus::WriteLevelScheme(std::string file_name) const {
+
+  //This function writes a level scheme file for G4CLX
+  std::ofstream outFile(file_name.c_str());
+  
+  for(Level* lvl : levels) {
+    
+    int index = lvl->GetIndex();
+    if(index == 0) //skip ground state
+      continue;
+
+    double en = lvl->GetEnergy();
+    double sp = lvl->GetSpin();
+    double lt = CalculateLifetime(index);
+
+    std::vector<int> indices;
+    for(Level* lvl2 : levels) {
+
+      int index2 = lvl2->GetIndex();
+      double prob = CalculateBranchProbability(index,index2);
+      if(prob > 1E-18)
+	indices.push_back(index2);
+      
+    }
+
+    int num = indices.size();
+    outFile << index << " " << 1000*en << " " << sp << " " << lt << " " << num << "\n";
+    
+    for(int i=0;i<num;++i) {
+     
+      int index2 = indices.at(i);
+      double egam = en - levels.at(index2)->GetEnergy();
+      double prob = CalculateBranchProbability(index,index2);
+      std::vector<int> mults = GetTransitionMultipolarities(index,index2);
+
+      int l1, l2;
+      double mx = 0.0;
+      double cc = 0.0;
+      if(mults.size() == 1) {
+	l1 = mults.at(0);
+	l2 = 0;
+	
+	cc = convCoeffs[l1-1]->Eval(egam);
+      }
+      else {
+	
+	l1 = mults.at(0);
+	l2 = mults.at(1);
+	
+	//Only E2/M1 mixing ratio implemented right now
+	if((l1 == 2 && l2 == 7) || (l1 == 7 && l2 == 2)) {
+	  mx = CalculateMixingRatio(index,index2);
+
+	  double fe2 = mx*mx/(mx*mx + 1.0);
+	  double fm1 = 1.0/(mx*mx + 1.0);
+	  cc = fe2*convCoeffs[1]->Eval(egam) + fm1*convCoeffs[6]->Eval(egam);;
+	}
+      }
+
+      if(l1 == 7)
+	l1 = 1;
+      if(l1 == 8)
+	l1 = 2;
+      if(l2 == 7)
+	l2 = 1;
+      if(l2 == 8)
+	l2 = 2;
+
+      if(l2 > 0 && l2 < l1)
+	std::swap(l1,l2);
+
+      outFile << " " << index2 << " " << prob << " " << l1 << " " << l2 << " " << mx << " " << cc << "\n";
+    
+    }
+    
   }
 
   return;

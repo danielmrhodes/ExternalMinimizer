@@ -33,8 +33,7 @@ class GosiaMinimizerFCN {
   Nucleus* beam;
   Literature* beam_lit;
   ExperimentalData* beam_data;
-
-  TFile* outFile;
+  
   TNtuple* ntuple;
   
   std::vector<std::string> target_names;

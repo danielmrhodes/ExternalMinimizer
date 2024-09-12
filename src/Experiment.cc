@@ -1,6 +1,7 @@
 #include "Experiment.h"
 #include <iostream>
 #include <iomanip>
+#include "TMath.h"
 #include "TString.h"
 
 Experiment::Experiment() {;}
@@ -19,36 +20,53 @@ void Experiment::ClearAllIntiYields() {
 
   for(Yield* yld : inti_yields_all)
     delete yld;
+  inti_yields_all.clear();
+  
+  return;
 }
 
 void Experiment::ClearAllPointYields() {
 
   for(Yield* yld : point_yields_all)
     delete yld;
+  point_yields_all.clear();
+  
+  return;
 }
 
 void Experiment::ClearPointYields() {
 
   for(Yield* yld : point_yields)
     delete yld;
+  point_yields.clear();
+  
+  return;
 }
 
 void Experiment::ClearRawData() {
 
   for(YieldError* yld : data_raw)
     delete yld;
+  data_raw.clear();
+  
+  return;
 }
 
 void Experiment::ClearCorrectedData() {
 
   for(YieldError* yld : data_corr)
     delete yld;
+  data_corr.clear();
+  
+  return;
 }
 
 void Experiment::ZeroAllIntiYields() {
 
   for(Yield* yld : inti_yields_all)
     yld->SetValue(0.0);
+
+  return;
 }
 
 void Experiment::ZeroAllPointYields() {
@@ -61,6 +79,8 @@ void Experiment::ZeroPointYields() {
 
   for(Yield* yld : point_yields)
     yld->SetValue(0.0);
+  
+  return;
 }
 
 Yield* Experiment::GetPointYield(int ni, int nf) const {
@@ -69,7 +89,7 @@ Yield* Experiment::GetPointYield(int ni, int nf) const {
     if(y->GetInitialIndices()[0] == ni && y->GetFinalIndices()[0] == nf)
       return y;
   
-  std::cout << "No yield between states " << ni << " and " << nf << std::endl;
+  std::cout << "No yield between states " << ni+1 << " and " << nf+1 << std::endl;
   return NULL;
   
 }
@@ -80,7 +100,7 @@ Yield* Experiment::GetIntiYield(int ni, int nf) const {
     if(y->GetInitialIndices()[0] == ni && y->GetFinalIndices()[0] == nf)
       return y;
   
-  std::cout << "No yield between states " << ni << " and " << nf << std::endl;
+  std::cout << "No yield between states " << ni+1 << " and " << nf+1 << std::endl;
   return NULL;
   
 }
@@ -99,11 +119,12 @@ void Experiment::PrintAllYields(std::string name) const {
 
   int intw = 7;
   int valw = 20;
-  
+  double r2d = TMath::RadToDeg(); 
+ 
   std::cout << std::left;
   std::cout << "\nAll Yields for " << name << " Experiment " << num << "\n"
 	    << "Energy Range: " << emin << " to " << emax << " MeV\n"
-	    << "Angle Range: " << tmin << " to " << tmax << " deg\n"
+	    << "Angle Range: " << tmin*r2d << " to " << tmax*r2d << " deg\n"
 	    << "Total Rutherford Cross Section: " << cs << " mb\n" 
 	    << std::endl;
 
@@ -142,11 +163,12 @@ void Experiment::PrintRawData(std::string name) const {
 
   int intw = 8;
   int valw = 20;
-  
+  double r2d = TMath::RadToDeg();
+   
   std::cout << std::left;
   std::cout << "\nRaw Data for " << name << " Experiment " << num << "\n"
 	    << "Energy Range: " << emin << " to " << emax << " MeV\n"
-	    << "Angle Range: " << tmin << " to " << tmax << " deg\n"
+	    << "Angle Range: " << tmin*r2d << " to " << tmax*r2d << " deg\n"
 	    << "Total Rutherford Cross Section: " << cs << " mb\n" 
 	    << std::endl;
   
@@ -191,11 +213,12 @@ void Experiment::PrintRawAndCorrData(std::string name) const {
 
   int intw = 8;
   int valw = 20;
+  double r2d = TMath::RadToDeg();
   
   std::cout << std::left;
   std::cout << "\nRaw and Corrected Data for " << name << " Experiment " << num << "\n"
 	    << "Energy Range: " << emin << " to " << emax << " MeV\n"
-	    << "Angle Range: " << tmin << " to " << tmax << " deg\n"
+	    << "Angle Range: " << tmin*r2d << " to " << tmax*r2d << " deg\n"
 	    << "Total Rutherford Cross Section: " << cs << " mb\n" 
 	    << std::endl;
   
@@ -253,11 +276,12 @@ void Experiment::PrintComparison(std::string name, double scale, double factor) 
 
   int intw = 8;
   int valw = 20;
-  
+  double r2d = TMath::RadToDeg();
+   
   std::cout << std::left;
   std::cout << "\nYield Comparison for " << name << " Experiment " << num << "\n"
 	    << "Energy Range: " << emin << " to " << emax << " MeV\n"
-	    << "Angle Range: " << tmin << " to " << tmax << " deg\n"
+	    << "Angle Range: " << tmin*r2d << " to " << tmax*r2d << " deg\n"
 	    << "Total Rutherford Cross Section: " << cs << " mb\n" 
 	    << "Coupling Factor: " << factor << "\n"
 	    << "Scaling Parameter: " << scale << "\n" << std::endl;

@@ -36,14 +36,23 @@ class Nucleus {
   void PrintBranchingRatios() const;
   void PrintMixingRatios() const;
   void PrintMatrixElements() const;
+  void PrintGammaTransitions() const;
   void PrintAll() const; 
   void PrintComparison(const Literature* lit) const;
 
-  inline double DecayLifetime(int mult, double me, double spin, double egam) const;
+  void Write(std::string file_name, int A, int Z) const;
+  void WriteLevelScheme(std::string file_name) const;
+  void Write(int A, int Z) const;
+  void WriteLevelScheme() const;
+
+  static double Moment(double dme, double spin, int mult);
+  double DecayLifetime(int mult, double me, double spin, double egam) const;
 
   int GetNumMatrixElements() const {return matrix_elements.size();}
   int GetNumLevels() const {return levels.size();}
   int GetNumFree() const;
+
+  double GetLevelEnergy(int index) const {return levels.at(index-1)->GetEnergy();}
   
   double CompareWithLiterature(const Literature* lit) const;
   double CompareLifetime(const LitVal* lv) const;
@@ -55,7 +64,9 @@ class Nucleus {
   double CalculateBranchProbability(int ni, int nf) const;
   double CalculateBranchingRatio(int ni, int nf1, int nf2) const;
   double CalculateMixingRatio(int ni, int nf) const;
-
+  
+  double ConvCoef(int mult, double egam) const {return convCoeffs[mult-1]->Eval(egam);}
+  std::vector<int> GetTransitionMultipolarities(int ni, int nf) const;
   std::vector<Level*> GetLevels() const {return levels;}
   
   MatrixElement* GetMatrixElement(int index) const {return matrix_elements[index];}
@@ -73,7 +84,7 @@ class Nucleus {
   MatrixElement* GetMatrixElement(int n1, int n2, int mt) const;
   //void Sort();
 
-  std::array<TSpline3*,8> convCoeffs;
+  std::array<TGraph*,8> convCoeffs;
 
   std::string name;
   //std::map<std::array<int,3>,int> the_map; //{mult,n1,n2} <-> vector index

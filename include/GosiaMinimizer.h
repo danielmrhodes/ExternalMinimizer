@@ -10,16 +10,16 @@ class GosiaMinimizer {
 
  public:
   
-  GosiaMinimizer();
   GosiaMinimizer(std::string meth, std::string alg);
+  GosiaMinimizer(std::string meth);
+  GosiaMinimizer();
   ~GosiaMinimizer();
   
   void Minimize();
-  void CalculateFullUncertainty() {calc_unc = true;}
+  void ValidateErrors() {mini->SetValidError(true); validate = true;}
+  void CalculateMINOSErrors() {calc_unc = true;}
   void WriteParameterSpace() {write = true;}
   void LimitMatrixElements() {limited = true;}
-  
-  void Print() const {mini->PrintResults();}
   
   void SetMaximumIterations(int max) {maxIter = max;}
   void SetMaximumCalls(int max) {maxCalls = max;}
@@ -41,6 +41,9 @@ class GosiaMinimizer {
   void SetBeamData(ExperimentalData* dat);
   void AddTargetData(ExperimentalData* dat);
   
+  void SetPrintLevel(int lvl) {mini->SetPrintLevel(lvl);}
+  void Print() const {mini->PrintResults();}
+
  private:
   
   void LinkExperiments(int num1, int num2, double rel);
@@ -48,9 +51,10 @@ class GosiaMinimizer {
   void Resize(int size);
   void SetupParameters(std::vector<double> scales);
   std::vector<double> FindInitialScalings();
-  void UpdateScalings();
+  void UpdateScalings(const double* min);
 
   bool limited; //flag for applying upper and lower limits to free MEs
+  bool validate;
   bool calc_unc;
   bool write;
 

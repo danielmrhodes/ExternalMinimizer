@@ -43,13 +43,13 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       MatrixElement* me = beam->GetMatrixElement(i);
       if(me->IsFixed()) {
 	
-	meFileB << me->GetValue() << "\n";
+	meFileB << std::setprecision(19) << me->GetValue() << "\n";
 	continue;
       }
     
       double val = pars[par_num];
       
-      meFileB << val << "\n";
+      meFileB << std::setprecision(19) << val << "\n";
       me->SetValue(val);
       ++par_num;
 
@@ -81,12 +81,12 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       
       MatrixElement* me = targ->GetMatrixElement(j);
       if(me->IsFixed()) {
-	meFileT << me->GetValue() << "\n";
+	meFileT << std::setprecision(19) << me->GetValue() << "\n";
 	continue;
       }
       
       double val = pars[par_num];
-      meFileT << val << "\n";
+      meFileT << std::setprecision(19) << val << "\n";
       me->SetValue(val);
       ++par_num;
       

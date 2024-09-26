@@ -70,7 +70,9 @@ class Nucleus {
   std::vector<Level*> GetLevels() const {return levels;}
   
   MatrixElement* GetMatrixElement(int index) const {return matrix_elements[index];}
-  //std::vector<MatrixElement*> GetMatrixElements() const {return matrix_elements;}
+  MatrixElement* GetMatrixElement2(int n1, int n2, int mt) const {return GetMatrixElement(n1-1,n2-1,mt);}
+  std::vector<MatrixElement*> GetMatrixElements() const {return matrix_elements;}
+  
   float GetMatrixElementValue(int index) const {return matrix_elements[index]->GetValue();}
   std::vector<float> GetMatrixElementValues() const;
   

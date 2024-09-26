@@ -93,10 +93,10 @@ void ExperimentalData::ReadDataFile(std::string file_name) {
       }
       else {
 	
-	int ni1 = indsI%100;
-	int ni2 = indsI/100;
-	int nf1 = indsF%100;
-	int nf2 = indsF/100;
+	int ni1 = indsI/100;
+	int ni2 = indsI%100;
+	int nf1 = indsF/100;
+	int nf2 = indsF%100;
 
 	yld->AddInitialIndex(ni1-1);
 	yld->AddFinalIndex(nf1-1);
@@ -171,6 +171,7 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
 	double yl = scale*yldI->GetValue()*eff;
 	
 	double ydat = rand.PoissonD(yl);
+	//double ydat = yl;
 	double err = TMath::Sqrt(ydat);
 
 	ydat /= eff;
@@ -185,10 +186,10 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
       }
       else {
 
-        int ni1 = indsI%100;
-        int ni2 = indsI/100;
-        int nf1 = indsF%100;
-        int nf2 = indsF/100;
+        int ni1 = indsI/100;
+        int ni2 = indsI%100;
+        int nf1 = indsF/100;
+        int nf2 = indsF%100;
 
 	double egam1 = 1000.0*(nuc->GetLevelEnergy(ni1) - nuc->GetLevelEnergy(nf1));
 	double eff1 = eff_curve->Eval(egam1);
@@ -197,6 +198,7 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
         double y1 = scale*yldI1->GetValue()*eff1;        
 
 	double ydat1 = rand.PoissonD(y1);
+	//double ydat1 = y1;
 	double err1 = TMath::Sqrt(ydat1);
 
 	ydat1 /= eff1;
@@ -209,6 +211,7 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
         double y2 = scale*yldI2->GetValue()*eff2;
 	
 	double ydat2 = rand.PoissonD(y2);
+	//double ydat2 = y2;
 	double err2 = TMath::Sqrt(ydat2);
 	
 	ydat2 /= eff2;
@@ -305,11 +308,11 @@ void ExperimentalData::WriteDataFile(std::string file_name, int A, int Z) {
       int nf = indsF.at(0);
       if(indsI.size() > 1) {
 
-        ni *= 100;
-	nf *= 100;
+	ni = 100*(ni+1);
+	nf = 100*(nf+1);
 	ni += indsI.at(1);
 	nf += indsF.at(1);
-
+	
       }
 
       double val = yldR->GetValue();

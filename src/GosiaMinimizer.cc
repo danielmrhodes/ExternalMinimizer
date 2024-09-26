@@ -5,14 +5,17 @@
 #include <fstream>
 
 GosiaMinimizer::GosiaMinimizer() : GosiaMinimizer("Minuit2","Migrad") {;}
+GosiaMinimizer::GosiaMinimizer(std::string meth) : GosiaMinimizer(meth,"") {;}
+
 GosiaMinimizer::GosiaMinimizer(std::string meth, std::string alg) {
   
   chi_cut = 1.0;
-  maxIter = 50000;
+  maxIter = 10000;
   maxCalls = 50000;
-  numTrys = 5;
-  fitTol = 0.1;
+  numTrys = 3;
+  fitTol = 0.0001;
 
+  validate = false;
   write = false;
   calc_unc = false;
   limited = false;
@@ -170,13 +173,12 @@ void GosiaMinimizer::LinkBeamExperiments(int exp1, int exp2, double rel) {
 void GosiaMinimizer::LinkBeamTargetExperiments(int exp1B, int numE, int target_num) {
 
   ExperimentalData* dataB = theFCN->beam_data;
-  int nrm_index = dataB->GetNormalizationIndex();
 
   int first_targ_exp = dataB->Size() + 1;
   for(int i=0;i<target_num-1;++i)
     first_targ_exp += theFCN->target_data[i]->Size();
-
-  //int sizeT = dataB->GetExperiment(exp1B)->GetTotalSize();
+  
+  int nrm_index = dataB->GetNormalizationIndex();
   double scale0 = dataB->GetExperiment(exp1B)->GetAllIntiYields().at(nrm_index)->GetValue() / 
     dataB->GetExperiment(exp1B)->GetAllPointYields().at(nrm_index)->GetValue();
   
@@ -344,8 +346,6 @@ void GosiaMinimizer::Minimize() {
   std::cout << "\n" << size << " free parameters" << std::endl;;
   for(int i=0;i<size;++i)
     std::cout << " Par" << i << " " << mini->VariableName(i) << ": " << mini->X()[i] << std::endl;
-
-  
   std::cout << "Minimizing..." << std::flush;
 
   int status = 3;
@@ -356,11 +356,30 @@ void GosiaMinimizer::Minimize() {
     ++count;
   }
   
-  if(status == 0)
-    std::cout << " Done! (" << count << " iterations.)" << std::endl;
-  else
-    std::cout << " Failed. (" << count << " iterations.)" << std::endl;
+  if(status == 0) {
+    std::cout << "Done! (" << count << " attempt"; 
+    if(count > 1)
+      std::cout << "s";
+    std::cout << ".)" << std::endl;
+  }
+  else {
+    std::cout << "Failed. (" << count << " iterations";
+    if(count > 1)
+      std::cout << "s";
+    std::cout << ".)" << std::endl;
+  }
+  if(validate && status == 0) {
+    
+    std::cout << "Validating Errors..." << std::flush;
+    mini->Hesse();
+    
+    if(mini->Status() == 0)
+      std::cout << "Done!" << std::endl;
+    else
+      std::cout << "Failed." << std::endl;
+  }
   
+  std::cout << "\n";
   Print();
   
   //Write Migrad (symmetric) uncertainties to file
@@ -379,41 +398,37 @@ void GosiaMinimizer::Minimize() {
 
   }
   uncFile.close();
-
-  //Write all matrix elements to file (a GOSIA matrix element file)
+  
   Nucleus* beam = theFCN->beam;
   int numM = beam->GetNumMatrixElements();
   
+  //Write all matrix elements to file (a GOSIA matrix element file)
   std::ofstream meFileB((theFCN->beam_name + ".bst-minimized").c_str());
   for(int i=0;i<numM;++i) {
     double val = beam->GetMatrixElementValue(i);
-    meFileB << val << "\n";
+    meFileB << std::setprecision(19) << val << "\n";
   }
   meFileB.close();
   
-  //Calculate MINOS (asymmetric) uncertainties if requested, write them to file
+  //Calculate MINOS (asymmetric) uncertainties if requested and write them to file
   //Only for free beam matrix elements
   if(calc_unc) {
     
-    std::cout << "Calculating MINOS uncertainties for free beam matrix elements..." << std::endl;
+    std::cout << "\nCalculating MINOS uncertainties for free beam matrix elements..." << std::endl;
     std::ofstream minosFile("MINOS_Errors.txt");
 
     int numF = beam->GetNumFree();
     for(int i=0;i<numF;++i) {
 
       double eU, eD;
-      int countM = 0;
-      while(countM < 2) {
-	if(mini->GetMinosError(i,eD,eU))
-	  break;
-	++countM;
-      }
+      mini->GetMinosError(i,eD,eU);
+      int statusM = mini->Status();
       
       double val = mini->X()[i];
       std::string name = mini->VariableName(i);
 
-      std::cout << name << ": " << val << " +" << eU << " " << eD << std::endl;
-      minosFile << name << ": " << val << " +" << eU << " " << eD << "\n";
+      std::cout << name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << std::endl;
+      minosFile << name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << "\n";
     }
     
     minosFile.close();
@@ -432,14 +447,14 @@ void GosiaMinimizer::Minimize() {
   }
  
   if(theFCN->beam_data)
-    UpdateScalings();
+    UpdateScalings(min);
   
   return;
 }
 
-void GosiaMinimizer::UpdateScalings() {
+void GosiaMinimizer::UpdateScalings(const double* x) {
 
-  const double* x = mini->X();
+  //const double* x = mini->X();
 
   int numM = theFCN->beam->GetNumFree();
   for(Nucleus* targ : theFCN->targets)

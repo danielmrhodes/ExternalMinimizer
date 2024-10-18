@@ -21,6 +21,7 @@ class GosiaMinimizer {
   void WriteParameterSpace() {write = true;}
   void LimitMatrixElements() {limited = true;}
   void IncludeRelativeCS() {relCS = true;}
+  void FixScalingParameters() {fixed = true;}
 
   void SetMaximumIterations(int max) {maxIter = max;}
   void SetMaximumCalls(int max) {maxCalls = max;}
@@ -54,11 +55,12 @@ class GosiaMinimizer {
   std::vector<double> FindInitialScalings();
   void UpdateScalings(const double* min);
 
-  bool limited; //flag for applying upper and lower limits to free MEs
-  bool validate;
-  bool calc_unc;
-  bool write;
-  bool relCS; //Flag to include RuthCS factor in relative couplings as GOSIA does
+  bool limited; //flag to apply upper and lower limits to free MEs
+  bool validate; //flag to validate symmetric errors (perform Hessian calculation)
+  bool calc_unc; //flag to calculate asymmetric MINOS erros
+  bool write; //flag to write parameter space to a ROOT file
+  bool relCS; //flag to include RuthCS factor in relative couplings as GOSIA does
+  bool fixed; //flag to fix the scaling parameters at their initial values
 
   int maxIter;
   int maxCalls;

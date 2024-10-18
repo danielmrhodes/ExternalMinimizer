@@ -20,6 +20,7 @@ GosiaMinimizer::GosiaMinimizer(std::string meth, std::string alg) {
   calc_unc = false;
   limited = false;
   relCS = false;
+  fixed = false;
 
   SetMethod(meth);
   SetAlgorithm(alg);
@@ -139,7 +140,7 @@ void GosiaMinimizer::SetupParameters(std::vector<double> scales) {
     }
   }
 
-  if(!theFCN->beam_data)
+  if(!theFCN->beam_data || fixed)
     return;
   
   //Minimum one free scaling parameter for experimental data
@@ -215,7 +216,7 @@ void GosiaMinimizer::LinkExperiments(int exp1, int exp2, double rel) {
 }
 
 std::vector<double> GosiaMinimizer::FindInitialScalings() {
-
+  
   //Fix beam matrix elements at initial values
   std::vector<int> beam_inds;
   for(int i=0;i<theFCN->beam->GetNumMatrixElements();++i) {
@@ -270,11 +271,14 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
   //Make the fuction and do the minimization
   ROOT::Math::Functor func(*theFCN,scale_num);
   tmp_mini->SetFunction(func);
-
+  
   tmp_mini->Minimize();
+  
   const double* x = tmp_mini->X();
+  UpdateScalings(x);
+    
   std::cout << "\nInitial Chi2: " << tmp_mini->MinValue();
-
+  
   //Record scaling parameters for future use
   std::vector<double> pars;
   for(int i=0;i<scale_num;++i)
@@ -295,23 +299,6 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
   
   delete tmp_mini;
   return pars;
-  
-  /*
-  int num = theFCN->beam->GetNumFree();
-  for(Nucleus* targ : theFCN->targets)
-    num += targ->GetNumFree();
-
-  for(int i=0;i<num;++i)
-    mini->FixVariable(i);
-    
-  mini->Minimize();
-
-  for(int i=0;i<num;++i)
-    mini->ReleaseVariable(i);
-
-  return;
-  
-  */
 
 }
 
@@ -332,7 +319,10 @@ void GosiaMinimizer::Minimize() {
       theFCN->FillFactors();
     
     scales = FindInitialScalings();
-    
+    if(fixed) {
+      theFCN->fixed = true;
+      theFCN->fixed_scales = scales;
+    }
   }
   SetupParameters(scales);
 
@@ -344,6 +334,11 @@ void GosiaMinimizer::Minimize() {
   mini->SetMaxFunctionCalls(maxCalls);
   mini->SetMaxIterations(maxIter);
   mini->SetTolerance(fitTol);
+
+  if(size == 0) {
+    mini->SetValidError(false); 
+    validate = false;
+  }
   
   std::cout << "\n" << size << " free parameters" << std::endl;;
   for(int i=0;i<size;++i)
@@ -450,7 +445,7 @@ void GosiaMinimizer::Minimize() {
     }
   }
  
-  if(theFCN->beam_data)
+  if(theFCN->beam_data && !fixed)
     UpdateScalings(min);
   
   return;

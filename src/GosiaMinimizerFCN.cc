@@ -7,6 +7,7 @@
 GosiaMinimizerFCN::GosiaMinimizerFCN() {
   
   chi_cut = 1.0;
+  fixed = false;
 
   beam_name = "";
   beam = NULL;
@@ -118,8 +119,11 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       int num = indices[i];
       double fac = factors[i];
       
-      double scale = rel*pars[par_num + num];    
-      //beam_data->scalings[i] = scale;
+      double scale;
+      if(fixed)
+	scale = rel*fixed_scales[num];
+      else
+	scale = rel*pars[par_num + num];    
 
       for(int j=0;j<exp->data_corr.size();++j) {
       
@@ -156,8 +160,11 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       int num = indices[numE_beam + numE_targs + j];
       double fac = factors[numE_beam + numE_targs + j];
       
-      double scale = rel*pars[par_num + num]; 
-      //dataT->scalings[j] = scale;
+      double scale;
+      if(fixed)
+	scale = rel*fixed_scales[num];
+      else
+	scale = rel*pars[par_num + num]; 
 
       for(int k=0;k<exp->data_corr.size();++k) {
       

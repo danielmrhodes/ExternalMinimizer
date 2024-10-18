@@ -982,6 +982,7 @@ void Nucleus::PrintGammaTransitions() const {
 
 void Nucleus::PrintAll() const {
 
+  std::cout << "\n##### " << name << " #####" << std::endl;
   PrintLevels();
   PrintLifetimes();
   PrintBranchProbabilities();
@@ -989,6 +990,7 @@ void Nucleus::PrintAll() const {
   //PrintMixingRatios();
   PrintMatrixElements();
   PrintGammaTransitions();
+  std::cout << "##########\n" << std::endl;
   
   return;
 }

@@ -795,3 +795,12 @@ void ExperimentalData::PrintExpRawData(int num) const {
   return;
 }
 
+int ExperimentalData::GetNumRawData() {
+
+  int size = 0;
+  for(Experiment* exp : data)
+    size += exp->GetRawDataSize();
+  
+  return size;
+
+}

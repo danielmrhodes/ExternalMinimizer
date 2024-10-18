@@ -12,14 +12,15 @@ GosiaMinimizer::GosiaMinimizer(std::string meth, std::string alg) {
   chi_cut = 1.0;
   maxIter = 10000;
   maxCalls = 50000;
-  numTrys = 3;
-  fitTol = 0.0001;
+  numTrys = 1;
+  fitTol = 0.00001;
 
   validate = false;
   write = false;
   calc_unc = false;
   limited = false;
-  
+  relCS = false;
+
   SetMethod(meth);
   SetAlgorithm(alg);
 
@@ -273,7 +274,6 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
   tmp_mini->Minimize();
   const double* x = tmp_mini->X();
   std::cout << "\nInitial Chi2: " << tmp_mini->MinValue();
-  
 
   //Record scaling parameters for future use
   std::vector<double> pars;
@@ -328,7 +328,9 @@ void GosiaMinimizer::Minimize() {
   std::vector<double> scales;
   if(theFCN->beam_data) {
     
-    theFCN->FillFactors();
+    if(relCS)
+      theFCN->FillFactors();
+    
     scales = FindInitialScalings();
     
   }
@@ -357,26 +359,39 @@ void GosiaMinimizer::Minimize() {
   }
   
   if(status == 0) {
-    std::cout << "Done! (" << count << " attempt"; 
+    std::cout << " Done! (" << count << " attempt"; 
     if(count > 1)
       std::cout << "s";
     std::cout << ".)" << std::endl;
   }
   else {
-    std::cout << "Failed. (" << count << " iterations";
+    std::cout << " Failed. (" << count << " attempt";
     if(count > 1)
       std::cout << "s";
     std::cout << ".)" << std::endl;
   }
+
+  Nucleus* beam = theFCN->beam;
+  int numM = beam->GetNumMatrixElements();
+
+  //Write all matrix elements to file (a GOSIA matrix element file)
+  std::ofstream meFileB((theFCN->beam_name + ".bst-minimized").c_str());
+  for(int i=0;i<numM;++i) {
+    double val = beam->GetMatrixElementValue(i);
+    meFileB << std::setprecision(19) << val << "\n";
+  }
+  meFileB.close();
+
+  //Perform error validation if requested
   if(validate && status == 0) {
     
     std::cout << "Validating Errors..." << std::flush;
     mini->Hesse();
     
     if(mini->Status() == 0)
-      std::cout << "Done!" << std::endl;
+      std::cout << " Done!" << std::endl;
     else
-      std::cout << "Failed." << std::endl;
+      std::cout << " Failed." << std::endl;
   }
   
   std::cout << "\n";
@@ -398,17 +413,6 @@ void GosiaMinimizer::Minimize() {
 
   }
   uncFile.close();
-  
-  Nucleus* beam = theFCN->beam;
-  int numM = beam->GetNumMatrixElements();
-  
-  //Write all matrix elements to file (a GOSIA matrix element file)
-  std::ofstream meFileB((theFCN->beam_name + ".bst-minimized").c_str());
-  for(int i=0;i<numM;++i) {
-    double val = beam->GetMatrixElementValue(i);
-    meFileB << std::setprecision(19) << val << "\n";
-  }
-  meFileB.close();
   
   //Calculate MINOS (asymmetric) uncertainties if requested and write them to file
   //Only for free beam matrix elements
@@ -453,9 +457,7 @@ void GosiaMinimizer::Minimize() {
 }
 
 void GosiaMinimizer::UpdateScalings(const double* x) {
-
-  //const double* x = mini->X();
-
+  
   int numM = theFCN->beam->GetNumFree();
   for(Nucleus* targ : theFCN->targets)
     numM += targ->GetNumFree();

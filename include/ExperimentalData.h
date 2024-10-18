@@ -15,10 +15,12 @@ class ExperimentalData {
   ~ExperimentalData();
 
   int Size() const {return data.size();}
+  int GetNumRawData();
+
   std::string GetName() const {return name;}
   std::vector<double> GetScalings() const {return scalings;}
   Experiment* GetExperiment(int num) const {return data.at(num-1);}
-
+  
   void SetNormalizationIndex(int index) {nrm_index = index;}
   int GetNormalizationIndex() const {return nrm_index;}
 

@@ -20,7 +20,8 @@ class GosiaMinimizer {
   void CalculateMINOSErrors() {calc_unc = true;}
   void WriteParameterSpace() {write = true;}
   void LimitMatrixElements() {limited = true;}
-  
+  void IncludeRelativeCS() {relCS = true;}
+
   void SetMaximumIterations(int max) {maxIter = max;}
   void SetMaximumCalls(int max) {maxCalls = max;}
   void SetNumTrys(int num) {numTrys = num;}
@@ -29,7 +30,7 @@ class GosiaMinimizer {
   
   void SetMethod(std::string str) {method = str;}
   void SetAlgorithm(std::string str) {algorithm = str;}
-  void LinkBeamExperiments(int exp1, int exp2, double rel);
+  void LinkBeamExperiments(int exp1, int exp2, double rel = 1.0);
   void LinkBeamTargetExperiments(int exp1B, int numE, int target_num);
   
   void SetBeam(Nucleus* nuc);
@@ -57,6 +58,7 @@ class GosiaMinimizer {
   bool validate;
   bool calc_unc;
   bool write;
+  bool relCS; //Flag to include RuthCS factor in relative couplings as GOSIA does
 
   int maxIter;
   int maxCalls;

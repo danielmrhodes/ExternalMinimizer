@@ -278,8 +278,12 @@ void Experiment::PrintComparison(std::string name, double scale, double factor) 
   int valw = 20;
   double r2d = TMath::RadToDeg();
    
+  int targ_A = int(targ_mass + 0.5);
+  int beam_A = int(beam_mass + 0.5);
+
   std::cout << std::left;
   std::cout << "\nYield Comparison for " << name << " Experiment " << num << "\n"
+	    << "Target: (" << TMath::Abs(targ_Z) << "," << targ_A << ") Beam: (" << TMath::Abs(beam_Z) << "," << beam_A << ")\n"
 	    << "Energy Range: " << emin << " to " << emax << " MeV\n"
 	    << "Angle Range: " << tmin*r2d << " to " << tmax*r2d << " deg\n"
 	    << "Total Rutherford Cross Section: " << cs << " mb\n" 
@@ -295,6 +299,7 @@ void Experiment::PrintComparison(std::string name, double scale, double factor) 
 	    << std::setw(valw) << "nSig"
 	    << "Chi2\n";
 
+  double sub_total = 0.0;
   for(int i=0;i<size;++i) {
 
     YieldError* yldC = data_corr.at(i);
@@ -317,6 +322,7 @@ void Experiment::PrintComparison(std::string name, double scale, double factor) 
       nSig = diff/eUC;
     
     double chi2 = wtC*nSig*nSig;
+    sub_total += chi2;
 
     std::string errC = Form("+%.0f-%.0f",eUC,eDC);
     std::string ni = Form("%d",nis[0]+1);
@@ -337,6 +343,8 @@ void Experiment::PrintComparison(std::string name, double scale, double factor) 
 	      << chi2 << "\n";
 
   }
+  
+  std::cout << "\n\t*** Sum Chi2 = " << sub_total << " (Chi2/numY = " << sub_total/size << ")" << std::endl;
   
   return;
 }

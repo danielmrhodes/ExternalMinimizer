@@ -11,7 +11,6 @@ class MatrixElement {
   ~MatrixElement();
   
   bool IsFixed() const {return fixed;}
-  //int GetVectorIndex() const {return indexV;}
   int GetIndex1() const {return index1;}
   int GetIndex2() const {return index2;}
   int GetMultipolarity() const {return mult;}
@@ -22,7 +21,6 @@ class MatrixElement {
 
   void Fix() {fixed = true;}
   void Release() {fixed = false;}
-  //void SetVectorIndex(int ind) {indexV = ind;}
   void SetIndex1(int ind) {index1 = ind;}
   void SetIndex2(int ind) {index2 = ind;}
   void SetMultipolarity(int mlt) {mult = mlt;} 
@@ -36,7 +34,6 @@ class MatrixElement {
  private:
 
   bool fixed;
-  //int indexV, index1, index2, mult;
   int index1, index2, mult;
   double value, ulim, llim;
   

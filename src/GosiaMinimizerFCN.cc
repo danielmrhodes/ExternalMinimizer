@@ -205,21 +205,8 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
     
     ntuple->Fill(&output[0]);
   }
-
-  /*
-  for(int i=0;i<par_num;++i)
-    std::cout << pars[i] << " ";
-
-  int prev_ind = -1;
-  for(int ind : indices) {
-    if(ind > prev_ind) {
-     std::cout << pars[par_num + ind] << " ";
-     prev_ind = ind;
-    }
-  }
-  std::cout << yld_chi2_beam << " " << lit_chi2_beam << std::endl;
-  */
-    
+  
+  //std::cout << yld_chi2_beam << std::endl;
   return yld_chi2_beam + lit_chi2_beam + yld_chi2_targs + lit_chi2_targs;
 
 }
@@ -277,7 +264,6 @@ void GosiaMinimizerFCN::FillFactors() {
     factors.push_back(fac);
   }
   beam_data->SetFactors(factors);
-  
   
   for(int i=0;i<target_data.size();++i) {
     

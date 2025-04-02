@@ -22,7 +22,10 @@ class GosiaMinimizer {
   void LimitMatrixElements() {limited = true;}
   void IncludeRelativeCS() {relCS = true;}
   void FixScalingParameters() {fixed = true;}
-
+  
+  void Scan(int index, double llim, double ulim, int nstep, bool inti = false);
+  void Scan2D(int indexX, double llimX, double ulimX, int nstepX, int indexY, double llimY, double ulimY, int nstepY, bool inti = false);
+  
   void SetMaximumIterations(int max) {maxIter = max;}
   void SetMaximumCalls(int max) {maxCalls = max;}
   void SetNumTrys(int num) {numTrys = num;}
@@ -48,6 +51,7 @@ class GosiaMinimizer {
 
  private:
   
+  void InitialSetup();
   void LinkExperiments(int num1, int num2, double rel);
   
   void Resize(int size);
@@ -69,7 +73,9 @@ class GosiaMinimizer {
   double chi_cut;
 
   GosiaMinimizerFCN* theFCN;
-  
+
+  std::vector<std::array<int,3>> targ_info;
+
   std::string method;
   std::string algorithm;
   ROOT::Math::Minimizer* mini;

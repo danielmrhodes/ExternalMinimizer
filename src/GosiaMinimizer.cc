@@ -2,6 +2,7 @@
 #include "Math/Factory.h"
 #include "Math/Functor.h"
 #include "TString.h"
+#include "TMatrixD.h"
 #include <fstream>
 
 GosiaMinimizer::GosiaMinimizer() : GosiaMinimizer("Minuit2","Migrad") {;}
@@ -174,6 +175,7 @@ void GosiaMinimizer::LinkBeamExperiments(int exp1, int exp2, double rel) {
 
 void GosiaMinimizer::LinkBeamTargetExperiments(int exp1B, int numE, int target_num) {
 
+  targ_info.push_back({exp1B,numE,target_num});
   ExperimentalData* dataB = theFCN->beam_data;
 
   int first_targ_exp = dataB->Size() + 1;
@@ -277,7 +279,7 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
   const double* x = tmp_mini->X();
   UpdateScalings(x);
     
-  std::cout << "\nInitial Chi2: " << tmp_mini->MinValue();
+  std::cout << "\nInitial Chi2: " << tmp_mini->MinValue() << std::endl;
   
   //Record scaling parameters for future use
   std::vector<double> pars;
@@ -302,12 +304,7 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
 
 }
 
-void GosiaMinimizer::Minimize() {
-
-  if(!theFCN->beam) {
-    std::cout << "No beam nucleus set!" << std::endl;
-    return;
-  }
+void GosiaMinimizer::InitialSetup() {
 
   if(write)
     theFCN->CreateNTuple();
@@ -325,26 +322,218 @@ void GosiaMinimizer::Minimize() {
     }
   }
   SetupParameters(scales);
-
-  int size = mini->NFree();
-  ROOT::Math::Functor func(*theFCN,size);
   
-  mini->SetFunction(func);
   mini->SetErrorDef(chi_cut);
   mini->SetMaxFunctionCalls(maxCalls);
   mini->SetMaxIterations(maxIter);
   mini->SetTolerance(fitTol);
 
+  int size = mini->NFree();
   if(size == 0) {
     mini->SetValidError(false); 
     validate = false;
   }
+
+  return;
+}
+
+void GosiaMinimizer::Scan(int index, double llim, double ulim, int nstep, bool inti) {
+
+  Nucleus* beam = theFCN->beam;
+  if(!beam) {
+    std::cout << "No beam nucleus set!" << std::endl;
+    return;
+  }
+  std::string name = beam->GetName();
+
+  MatrixElement* me = beam->GetMatrixElement(index);
+  if(!me->IsFixed()) {
+    std::cout << "Sanning matrix element is not fixed." << std::endl;
+    return;
+  }
   
-  std::cout << "\n" << size << " free parameters" << std::endl;;
+  InitialSetup();
+  
+  int size = mini->NFree();
+  ROOT::Math::Functor func(*theFCN,size);
+  mini->SetFunction(func);
+  
+  ExperimentalData* data = theFCN->beam_data;
+  std::ofstream outFile("scan.txt");
+  
+  double step = (ulim - llim)/double(nstep - 1);
+  for(int i=0;i<nstep;++i) {
+
+    double val = llim + i*step;
+    me->SetValue(val);
+
+    std::ofstream meFile((name + ".bst").c_str());
+    for(MatrixElement* me1 : beam->GetMatrixElements())
+      meFile << std::setprecision(19) << me1->GetValue() << "\n";
+    meFile.close();
+
+    if(data) {
+      
+      std::string cmd = "gosia < " + name + ".POIN.inp > /dev/null 2>&1";
+      system(cmd.c_str());
+      
+      data->FillFromPoinOutput(); 
+
+      if(inti) {
+	
+	cmd = "gosia < " + name + ".INTI.inp > /dev/null 2>&1";
+	system(cmd.c_str());
+	
+	data->FillFromIntiOutput();
+	data->Correct();
+
+	//Recorrect target-linked experiments
+	for(std::array<int,3> info : targ_info) {
+
+	  int exp1B = info[0];
+	  int numE = info[1];
+	  int targ_num = info[2];
+	  
+	  int nrm_index = data->GetNormalizationIndex();
+	  double scale0 = data->GetExperiment(exp1B)->GetAllIntiYields().at(nrm_index)->GetValue() / 
+	    data->GetExperiment(exp1B)->GetAllPointYields().at(nrm_index)->GetValue();
+
+	  for(int j=0;j<numE;++j)  
+	    data->RecorrectExp(exp1B + j,scale0);
+	  
+	}
+      }
+    }
+    
+    mini->Minimize();
+    
+    double chi2 = mini->MinValue();
+    std::cout << val << " " << chi2 << std::endl;
+    //Print();
+
+    outFile << chi2;
+    for(MatrixElement* me1 : beam->GetMatrixElements())
+      outFile << " " << me1->GetValue();
+    outFile << "\n";
+    
+  }
+  
+  outFile.close();
+  
+  return;
+}
+
+void GosiaMinimizer::Scan2D(int indexX, double llimX, double ulimX, int nstepX, int indexY, double llimY, double ulimY, int nstepY, bool inti) {
+
+  Nucleus* beam = theFCN->beam;
+  if(!beam) {
+    std::cout << "No beam nucleus set!" << std::endl;
+    return;
+  }
+  std::string name = beam->GetName();
+
+  MatrixElement* meX = beam->GetMatrixElement(indexX);
+  MatrixElement* meY = beam->GetMatrixElement(indexY);
+  if(!meX->IsFixed() || !meY->IsFixed()) {
+    std::cout << "Sanning matrix elements are not fixed." << std::endl;
+    return;
+  }
+
+  InitialSetup();
+
+  int size = mini->NFree();
+  ROOT::Math::Functor func(*theFCN,size);
+  mini->SetFunction(func);
+  
+  ExperimentalData* data = theFCN->beam_data;
+  std::ofstream outFile("scan2D.txt");
+
+  double stepX = (ulimX - llimX)/double(nstepX - 1);
+  double stepY = (ulimY - llimY)/double(nstepY - 1);  
+  for(int i=0;i<nstepX;++i) {
+    
+    double valX = llimX + i*stepX;
+    meX->SetValue(valX);
+    
+    for(int j=0;j<nstepY;++j) {
+      
+      double valY = llimY + j*stepY;
+      meY->SetValue(valY);
+      
+      std::ofstream meFile((name + ".bst").c_str());
+      for(MatrixElement* me1 : beam->GetMatrixElements())
+	meFile << std::setprecision(19) << me1->GetValue() << "\n";
+      meFile.close();
+      
+      if(data) {
+	
+	std::string cmd = "gosia < " + name + ".POIN.inp > /dev/null 2>&1";
+	system(cmd.c_str());
+	
+	data->FillFromPoinOutput(); 
+	
+	if(inti) {
+	  
+	  cmd = "gosia < " + name + ".INTI.inp > /dev/null 2>&1";
+	  system(cmd.c_str());
+	  
+	  data->FillFromIntiOutput();
+	  data->Correct();
+	  
+	  //Recorrect target-linked experiments
+	  for(std::array<int,3> info : targ_info) {
+	    
+	    int exp1B = info[0];
+	    int numE = info[1];
+	    int targ_num = info[2];
+	    
+	    int nrm_index = data->GetNormalizationIndex();
+	    double scale0 = data->GetExperiment(exp1B)->GetAllIntiYields().at(nrm_index)->GetValue() / 
+	      data->GetExperiment(exp1B)->GetAllPointYields().at(nrm_index)->GetValue();
+	    
+	    for(int k=0;k<numE;++k)  
+	      data->RecorrectExp(exp1B + k,scale0);
+	    
+	  }
+	}
+      }
+      
+      mini->Minimize();
+
+      double chi2 = mini->MinValue();
+      std::cout << valX << " " << valY << " " << chi2 << std::endl;
+      //Print();
+      
+      outFile << chi2;
+      for(MatrixElement* me1 : beam->GetMatrixElements())
+	outFile << " " << me1->GetValue();
+      outFile << "\n";
+      
+    }
+  }
+  
+  outFile.close();
+
+  return;
+}
+
+void GosiaMinimizer::Minimize() {
+
+  if(!theFCN->beam) {
+    std::cout << "No beam nucleus set!" << std::endl;
+    return;
+  }
+  InitialSetup();
+  
+  int size = mini->NFree();
+  ROOT::Math::Functor func(*theFCN,size);
+  mini->SetFunction(func);
+  
+  std::cout << size << " free parameters" << std::endl;;
   for(int i=0;i<size;++i)
     std::cout << " Par" << i << " " << mini->VariableName(i) << ": " << mini->X()[i] << std::endl;
   std::cout << "Minimizing..." << std::flush;
-
+  
   int status = 3;
   int count = 0;
   while(count < numTrys && status != 0) {
@@ -383,7 +572,8 @@ void GosiaMinimizer::Minimize() {
     std::cout << "Validating Errors..." << std::flush;
     mini->Hesse();
     
-    if(mini->Status() == 0)
+    status = mini->Status();
+    if(status == 0)
       std::cout << " Done!" << std::endl;
     else
       std::cout << " Failed." << std::endl;
@@ -392,11 +582,50 @@ void GosiaMinimizer::Minimize() {
   std::cout << "\n";
   Print();
   
-  //Write Migrad (symmetric) uncertainties to file
-  //All free parameters
   const double* min = mini->X();
   const double* errors = mini->Errors();
+  if(validate && status == 0) {
+    
+    TMatrixD res;
+    res.ResizeTo(2,size);
+    for(int i=0;i<size;++i) {
+      res[0][i] = min[i];
+      res[1][i] = errors[i];
+    }
+    
+    TMatrixD covM;
+    TMatrixD corM;
+    covM.ResizeTo(size,size);
+    corM.ResizeTo(size,size);
+    
+    for(int i=0;i<size;++i) {
+      for(int j=i;j<size;++j) {
+	covM[i][j] = mini->CovMatrix(i,j);
+	covM[j][i] = mini->CovMatrix(j,i);
+	corM[i][j] = mini->Correlation(i,j);
+	corM[j][i] = mini->Correlation(j,i);
+      }
+    }
 
+    //Save minimum, uncertainties, and correlations to a ROOT file
+    TFile* fileM = new TFile("ResultFile.root","RECREATE");
+    fileM->cd();
+    
+    res.Write("Minimum");
+    covM.Write("Covariance_Matrix");
+    corM.Write("Correlation_Matrix");
+    
+    fileM->Close();
+    delete fileM;
+
+    std::cout << "\n******** Covariance matrix **********";
+    covM.Print();
+    
+    std::cout << "\n******** Correlation matrix **********";
+    corM.Print();
+  }
+
+  //Write Migrad (symmetric) uncertainties to a text file
   std::ofstream uncFile("Symmetric_Errors.txt");
   for(int i=0;i<size;++i) {
     
@@ -404,12 +633,12 @@ void GosiaMinimizer::Minimize() {
      double err = errors[i];
      std::string name = mini->VariableName(i);
      
-     uncFile << name << ": " << val << " +- " << err << "\n";
+     uncFile << "Par " << i << " " << name << ": " << val << " +- " << err << "\n";
 
   }
   uncFile.close();
   
-  //Calculate MINOS (asymmetric) uncertainties if requested and write them to file
+  //Calculate MINOS (asymmetric) uncertainties if requested and write them to a text file
   //Only for free beam matrix elements
   if(calc_unc) {
     
@@ -426,8 +655,8 @@ void GosiaMinimizer::Minimize() {
       double val = mini->X()[i];
       std::string name = mini->VariableName(i);
 
-      std::cout << name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << std::endl;
-      minosFile << name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << "\n";
+      std::cout << "Par " << i << " " <<  name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << std::endl;
+      minosFile << "Par " << i << " " <<  name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << "\n";
     }
     
     minosFile.close();
@@ -440,7 +669,7 @@ void GosiaMinimizer::Minimize() {
     TNtuple* tpl = theFCN->ntuple;
     if(tpl) {
       TFile* outFile = new TFile("ParameterSpace.root","RECREATE"); 
-      theFCN->ntuple->Write();
+      tpl->Write();
       outFile->Close();
     }
   }

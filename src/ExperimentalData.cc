@@ -171,7 +171,6 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
 	double yl = scale*yldI->GetValue()*eff;
 	
 	double ydat = rand.PoissonD(yl);
-	//double ydat = yl;
 	double err = TMath::Sqrt(ydat);
 
 	ydat /= eff;
@@ -198,7 +197,6 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
         double y1 = scale*yldI1->GetValue()*eff1;        
 
 	double ydat1 = rand.PoissonD(y1);
-	//double ydat1 = y1;
 	double err1 = TMath::Sqrt(ydat1);
 
 	ydat1 /= eff1;
@@ -211,7 +209,6 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
         double y2 = scale*yldI2->GetValue()*eff2;
 	
 	double ydat2 = rand.PoissonD(y2);
-	//double ydat2 = y2;
 	double err2 = TMath::Sqrt(ydat2);
 	
 	ydat2 /= eff2;
@@ -241,7 +238,7 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
   return;
 }
 
-void ExperimentalData::GenerateAllData(Nucleus* nuc, TF1* eff_curve, double scale) {
+void ExperimentalData::GenerateAllData(Nucleus* nuc, TF1* eff_curve, double scale, double thresh) {
  
   TRandom3 rand;
   for(Experiment* exp : data) {
@@ -258,6 +255,9 @@ void ExperimentalData::GenerateAllData(Nucleus* nuc, TF1* eff_curve, double scal
       double eff = eff_curve->Eval(egam);
       
       double yl = scale*yldI->GetValue()*eff;
+      if(yl < thresh)
+	continue;
+
       double ydat = rand.PoissonD(yl);
       double err = TMath::Sqrt(ydat);
 

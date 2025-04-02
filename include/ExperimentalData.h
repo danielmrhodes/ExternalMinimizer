@@ -35,7 +35,7 @@ class ExperimentalData {
   
   void GenerateData(std::string file_name, Nucleus* nuc, TF1* eff, double scale);
   void GenerateData(Nucleus* nuc, TF1* eff, double scale);
-  void GenerateAllData(Nucleus* nuc, TF1* eff, double scale);
+  void GenerateAllData(Nucleus* nuc, TF1* eff, double scale, double thresh = -1.0);
 
   void WriteDataFile(std::string file_name,int A, int Z);  
   void WriteDataFile(int A, int Z);
@@ -52,6 +52,7 @@ class ExperimentalData {
   void PrintAllYields() const;
 
   friend class GosiaMinimizerFCN;
+  friend class GosiaMinimizer;
   
  private:
 

@@ -84,12 +84,10 @@ class Nucleus {
   private:
   
   MatrixElement* GetMatrixElement(int n1, int n2, int mt) const;
-  //void Sort();
 
   std::array<TGraph*,8> convCoeffs;
-
+  
   std::string name;
-  //std::map<std::array<int,3>,int> the_map; //{mult,n1,n2} <-> vector index
   std::vector<MatrixElement*> matrix_elements;
   std::vector<Level*> levels;
   

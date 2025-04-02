@@ -151,7 +151,6 @@ double Nucleus::CalculateBranchingRatio(int ni, int nf1, int nf2) const {
     int mult = me->GetMultipolarity();
     
     if((ni == n1 && nf1 == n2) || (ni == n2 && nf1 == n1)) {
-
       
       double cc = convCoeffs[mult-1]->Eval(egam1);
       sum1 += (cc + 1.0)/DecayLifetime(mult,me->GetValue(),spin,egam1);
@@ -384,7 +383,7 @@ void Nucleus::CreateFromGosiaInputFile(std::string file_name) {
   //std::ifstream inFile((name+".POIN.inp").c_str());
   std::ifstream inFile(file_name.c_str());
   if(!inFile.is_open()) {
-    std::cout << "Could not open Gosia input file " << name+".POIN.inp" << "!" << std::endl;
+    std::cout << "Could not open Gosia input file " << file_name << "!" << std::endl;
     return;
   }
 
@@ -481,7 +480,7 @@ void Nucleus::CreateFromGosiaOutputFile(std::string file_name) {
   
   std::ifstream inFile(file_name);
   if(!inFile.is_open()) {
-    std::cout << "Could not open Gosia output file " << name + ".out" << "!" << std::endl;
+    std::cout << "Could not open Gosia output file " << file_name << "!" << std::endl;
     return;
   }
 
@@ -577,7 +576,7 @@ void Nucleus::FillFromBSTFile(std::string file_name) {
   
   std::ifstream inFile(file_name);
   if(!inFile.is_open()) {
-    std::cout << "Could not open Gosia file " << name+".bst" << "!" << std::endl;
+    std::cout << "Could not open Gosia file " << file_name << "!" << std::endl;
     return;
   }
   
@@ -836,7 +835,8 @@ void Nucleus::PrintMatrixElements() const {
 
   std::cout << std::left;
   std::cout << "\nMatrix Elements:\n";
-  std::cout << std::setw(intw) << "n1" 
+  std::cout << std::setw(intw) << "index" 
+	    << std::setw(intw) << "n1" 
 	    << std::setw(intw) << "n2" 
 	    << std::setw(intw) << "mult" 
 	    << std::setw(valw) << "value"
@@ -872,7 +872,8 @@ void Nucleus::PrintMatrixElements() const {
     else
       bsl_q = Moment(val,spin,l);
       
-    std::cout << std::setw(intw) << n1+1
+    std::cout << std::setw(intw) << i+1
+	      << std::setw(intw) << n1+1
 	      << std::setw(intw) << n2+1
 	      << std::setw(intw) << mult
 	      << std::setw(valw) << val 

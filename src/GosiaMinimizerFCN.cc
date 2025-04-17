@@ -13,8 +13,6 @@ GosiaMinimizerFCN::GosiaMinimizerFCN() {
   beam = NULL;
   beam_lit = NULL;
   beam_data = NULL;
-
-  outFile = NULL;
   ntuple = NULL;
   
   target_names.clear();
@@ -227,10 +225,7 @@ void GosiaMinimizerFCN::CreateNTuple() {
   int size = beam->GetNumMatrixElements();
   for(int i=1;i<size+1;++i)
     varlist += Form(":ME%d",i);
-
-  outFile = new TFile("ParameterSpace.root","RECREATE"); 
-  outFile->cd();
-
+  
   ntuple = new TNtuple("ps","Parameter Space",varlist.c_str());
 
   return;
@@ -238,8 +233,11 @@ void GosiaMinimizerFCN::CreateNTuple() {
 
 void GosiaMinimizerFCN::Write() {
 
+  TFile* outFile = new TFile("ParameterSpace.root","RECREATE");
+  
   ntuple->Write();
   outFile->Close();
+  
   delete outFile;
 
   return;

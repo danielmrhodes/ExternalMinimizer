@@ -661,19 +661,8 @@ void GosiaMinimizer::Minimize() {
     minosFile.close();
   }
   
-  if(write) {
-    
-    /*  
-    TNtuple* tpl = theFCN->ntuple;
-    if(tpl) {
-      TFile* outFile = new TFile("ParameterSpace.root","RECREATE"); 
-      tpl->Write();
-      outFile->Close();
-    }
-    */
-
+  if(write)
     theFCN->Write();
-  }
  
   beam->FillFromBSTFile(theFCN->beam_name + ".bst-minimized"); //Reset MEs to minimum  
   if(theFCN->beam_data && !fixed)

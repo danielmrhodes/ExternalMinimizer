@@ -26,6 +26,7 @@ class GosiaMinimizerFCN {
   
   void CreateNTuple();
   void FillFactors();
+  void Write();
   
   bool fixed;
   double chi_cut;
@@ -36,6 +37,7 @@ class GosiaMinimizerFCN {
   ExperimentalData* beam_data;
   
   TNtuple* ntuple;
+  TFile* outFile;
   
   std::vector<std::string> target_names;
   std::vector<Nucleus*> targets;

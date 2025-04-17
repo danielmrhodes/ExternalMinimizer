@@ -658,22 +658,24 @@ void GosiaMinimizer::Minimize() {
       std::cout << "Par " << i << " " <<  name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << std::endl;
       minosFile << "Par " << i << " " <<  name << ": " << val << " +" << eU << " " << eD << " (status = " << statusM << ")" << "\n";
     }
-    
     minosFile.close();
-    beam->FillFromBSTFile(theFCN->beam_name + ".bst-minimized"); //Reset MEs to minimum   
-  
   }
   
   if(write) {
     
+    /*  
     TNtuple* tpl = theFCN->ntuple;
     if(tpl) {
       TFile* outFile = new TFile("ParameterSpace.root","RECREATE"); 
       tpl->Write();
       outFile->Close();
     }
+    */
+
+    theFCN->Write();
   }
  
+  beam->FillFromBSTFile(theFCN->beam_name + ".bst-minimized"); //Reset MEs to minimum  
   if(theFCN->beam_data && !fixed)
     UpdateScalings(min);
   

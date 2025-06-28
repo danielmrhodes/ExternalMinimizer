@@ -8,14 +8,12 @@ GosiaMinimizerFCN::GosiaMinimizerFCN() {
   
   chi_cut = 1.0;
   fixed = false;
-
-  beam_name = "";
+  
   beam = NULL;
   beam_lit = NULL;
   beam_data = NULL;
   ntuple = NULL;
   
-  target_names.clear();
   targets.clear();
   target_lits.clear();
   target_data.clear();
@@ -37,7 +35,7 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       
     //Update free beam matrix elements, write all of them to file
     const int sizeB = beam->GetNumMatrixElements();
-    std::ofstream meFileB((beam_name + ".bst").c_str());
+    std::ofstream meFileB((beam->GetName() + ".bst").c_str());
     
     for(int i=0;i<sizeB;++i) {
 
@@ -60,7 +58,7 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
     if(beam_data) { 
 
       //Calculate beam point yields with new matrix elements
-      std::string cmdB = "gosia < " + beam_name + ".POIN.inp > /dev/null 2>&1";
+      std::string cmdB = "gosia < " + beam->GetName() + ".POIN.inp > /dev/null 2>&1";
       system(cmdB.c_str());
       
       //Read in the new point yields
@@ -76,7 +74,7 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       continue;
     
     const int sizeT = targ->GetNumMatrixElements();
-    std::ofstream meFileT((target_names[i] + ".bst").c_str());
+    std::ofstream meFileT((targ->GetName() + ".bst").c_str());
     
     for(int j=0;j<sizeT;++j) {
       
@@ -97,7 +95,7 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
     if(i < target_data.size()) { 
       
       //Calculate target point yields with new matrix elements
-      std::string cmdT = "gosia < " + target_names[i] + ".POIN.inp > /dev/null 2>&1";
+      std::string cmdT = "gosia < " + targ->GetName() + ".POIN.inp > /dev/null 2>&1";
       system(cmdT.c_str());
       
       //Read in the new point yields

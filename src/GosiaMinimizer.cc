@@ -47,7 +47,6 @@ GosiaMinimizer::~GosiaMinimizer() {
 void GosiaMinimizer::SetBeam(Nucleus* nuc) {
 
   theFCN->beam = nuc;
-  theFCN->beam_name = nuc->GetName();
   
   return;
 }
@@ -55,7 +54,6 @@ void GosiaMinimizer::SetBeam(Nucleus* nuc) {
 void GosiaMinimizer::AddTarget(Nucleus* nuc) {
 
   theFCN->targets.push_back(nuc);
-  theFCN->target_names.push_back(nuc->GetName());
   
   return;
 }
@@ -523,6 +521,9 @@ void GosiaMinimizer::Minimize() {
     std::cout << "No beam nucleus set!" << std::endl;
     return;
   }
+  if(!(theFCN->beam->CheckMatrixElements()))
+    return;
+
   InitialSetup();
   
   int size = mini->NFree();
@@ -556,15 +557,29 @@ void GosiaMinimizer::Minimize() {
   }
 
   Nucleus* beam = theFCN->beam;
-  int numM = beam->GetNumMatrixElements();
-
-  //Write all matrix elements to file (a GOSIA matrix element file)
-  std::ofstream meFileB((theFCN->beam_name + ".bst-minimized").c_str());
-  for(int i=0;i<numM;++i) {
-    double val = beam->GetMatrixElementValue(i);
+  std::string beam_name = beam->GetName();
+  
+  //Write all matrix elements in the beam to file (a GOSIA matrix element file)
+  std::ofstream meFileB((beam_name + ".bst-minimized").c_str());
+  for(MatrixElement* me : beam->GetMatrixElements()) {
+    double val = me->GetValue();
     meFileB << std::setprecision(19) << val << "\n";
   }
   meFileB.close();
+
+  //Write all matrix elements in all the targets to file (a GOSIA matrix element file)
+  for(int i=0;i<theFCN->targets.size();i++) {
+    
+    Nucleus* targ = theFCN->targets[i];
+    
+    std::ofstream meFileT((targ->GetName() + ".bst-minimized").c_str());
+    for(MatrixElement* me : targ->GetMatrixElements()) {
+      double val = me->GetValue();
+      meFileT << std::setprecision(19) << val << "\n";
+    }
+    meFileT.close();
+
+  }
 
   //Perform error validation if requested
   if(validate && status == 0) {
@@ -664,7 +679,7 @@ void GosiaMinimizer::Minimize() {
   if(write)
     theFCN->Write();
  
-  beam->FillFromBSTFile(theFCN->beam_name + ".bst-minimized"); //Reset MEs to minimum  
+  beam->FillFromBSTFile(beam_name + ".bst-minimized"); //Reset MEs to minimum  
   if(theFCN->beam_data && !fixed)
     UpdateScalings(min);
   

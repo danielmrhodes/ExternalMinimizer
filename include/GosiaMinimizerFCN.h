@@ -30,15 +30,13 @@ class GosiaMinimizerFCN {
   
   bool fixed;
   double chi_cut;
-
-  std::string beam_name;
+  
   Nucleus* beam;
   Literature* beam_lit;
   ExperimentalData* beam_data;
   
   TNtuple* ntuple;
   
-  std::vector<std::string> target_names;
   std::vector<Nucleus*> targets;
   std::vector<Literature*> target_lits;
   std::vector<ExperimentalData*> target_data;

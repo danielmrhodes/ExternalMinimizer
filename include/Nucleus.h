@@ -45,6 +45,8 @@ class Nucleus {
   void Write(int A, int Z) const;
   void WriteLevelScheme() const;
 
+  bool CheckMatrixElements() const;
+
   static double Moment(double dme, double spin, int mult);
   double DecayLifetime(int mult, double me, double spin, double egam) const;
 

@@ -232,7 +232,7 @@ double Nucleus::CompareLifetime(const LitVal* lv) const {
 double Nucleus::CompareBranchingRatio(const LitVal* lv) const {
   
   double br = CalculateBranchingRatio(lv->GetInitialIndex(),lv->GetFinalIndex(),
-				       lv->GetFinalIndexTwo()); 
+				      lv->GetFinalIndexTwo()); 
   return lv->Compare(br);
 
 }
@@ -576,7 +576,7 @@ void Nucleus::FillFromBSTFile(std::string file_name) {
   
   std::ifstream inFile(file_name);
   if(!inFile.is_open()) {
-    std::cout << "Could not open Gosia file " << file_name << "!" << std::endl;
+    std::cout << "Could not open matrix element file " << file_name << "!" << std::endl;
     return;
   }
   
@@ -658,6 +658,77 @@ std::vector<float> Nucleus::GetMatrixElementValues() const {
     vals[i] = float(matrix_elements[i]->GetValue());
 
   return vals;
+}
+
+bool Nucleus::CheckMatrixElements() const {
+
+  bool good = true;
+  
+  int size = matrix_elements.size();
+  for(int i=0;i<size;++i) {
+
+    MatrixElement* me = matrix_elements.at(i);
+    
+    int n1 = me->GetIndex1();
+    int n2 = me->GetIndex2();
+    int l = me->GetMultipolarity();
+    int ll = l;
+    if(l == 7)
+      ll = 1;
+    if(l == 8)
+      ll = 2;
+
+    Level* lvl1 = levels[n1];
+    Level* lvl2 = levels[n2];
+
+    int p1 = lvl1->GetParity();
+    int p2 = lvl2->GetParity();
+    int pc = 1;
+    if(l > 6)
+      pc = -1;
+
+    int pf = pc*int(TMath::Power(-1,ll));
+
+    double sp1 = lvl1->GetSpin();
+    double sp2 = lvl2->GetSpin();
+    double diff = std::abs(sp1 - sp2);
+    double sum = sp1 + sp2;
+
+    std::string mult = me->GetMultS();
+    std::string ps1 = lvl1->GetParityS();
+    std::string ps2 = lvl2->GetParityS();
+    
+    std::string jpi1 = Form("%.1f",sp1) + ps1;
+    if(std::floor(sp1) == sp1)
+      jpi1 = Form("%.0f",sp1) + ps1;
+
+    std::string jpi2 = Form("%.1f",sp2) + ps2;
+    if(std::floor(sp2) == sp2)
+      jpi2 = Form("%.0f",sp2) + ps2;
+
+    std::string mes = "<" + jpi1 + "||" + mult + "||" + jpi2 + ">"; 
+
+    //Check triangle rule
+    if(diff > ll || sum < ll) {
+      std::cout << "Matrix element " << i << ", connecting states " << n1+1 << " and " << n2+1 << ", breaks the angular momentum triangle condition"
+		<< "\n  Matrix element is " << mes
+		<< "\n  J1=" << sp1 << ", J2=" << sp2 << ", L=" << ll << " -> L should be between " << diff << " and " << sum 
+		<< std::endl;
+      good = false;
+    }
+    
+    //Check parity change
+    if(p1*p2 != pf) {
+      std::cout << "Matrix element " << i << ", connecting states " << n1+1 << " and " << n2+1 << ", breaks parity conservation"
+		<< "\n  Matrix element is " << mes
+		<< "\n  P1=" << p1 << ", P2=" << p2 << ", P=" << p1*p2 << " -> P should be " << pf 
+		<< std::endl;
+      good = false;
+    }
+    
+  }
+
+  return good;
 }
 
 void Nucleus::PrintLevels() const {

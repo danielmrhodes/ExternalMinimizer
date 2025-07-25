@@ -1,8 +1,0 @@
-To (hopefully) compile this example, just type 'make' in this directory.
-This will create an executable called minimize
-
-To run the program, type 
-./minimize
-
-If you want to save the output to text file, type
-./minimize > output.txt

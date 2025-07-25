@@ -633,11 +633,11 @@ void GosiaMinimizer::Minimize() {
     fileM->Close();
     delete fileM;
 
-    std::cout << "\n******** Covariance matrix **********";
-    covM.Print();
+    //std::cout << "\n******** Covariance matrix **********";
+    //covM.Print();
     
-    std::cout << "\n******** Correlation matrix **********";
-    corM.Print();
+    //std::cout << "\n******** Correlation matrix **********";
+    //corM.Print();
   }
 
   //Write Migrad (symmetric) uncertainties to a text file

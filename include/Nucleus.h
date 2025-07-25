@@ -5,6 +5,7 @@
 #include "MatrixElement.h"
 #include "Level.h"
 #include "TSpline.h"
+#include "TArrayF.h"
 #include <vector>
 #include <map>
 
@@ -77,6 +78,9 @@ class Nucleus {
   
   float GetMatrixElementValue(int index) const {return matrix_elements[index]->GetValue();}
   std::vector<float> GetMatrixElementValues() const;
+
+  void SetMatrixElementValues(std::vector<float> vals);
+  void SetMatrixElementValues(TArrayF* vals);
   
   std::string GetName() const {return name;}
   void SetName(std::string nm) {name = nm;}

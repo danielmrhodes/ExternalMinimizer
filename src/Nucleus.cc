@@ -660,6 +660,67 @@ std::vector<float> Nucleus::GetMatrixElementValues() const {
   return vals;
 }
 
+void Nucleus::SetMatrixElementValues(std::vector<float> vals) {
+
+  int size = matrix_elements.size();
+  if(vals.size() != size) {
+    std::cout << "ME value vector should have size of " << size << " (size = " << vals.size() << ")." << std::endl;
+    return;
+  }
+
+  for(int i=0;i<size;i++) {
+
+    float val = vals.at(i);
+
+    MatrixElement* me = matrix_elements.at(i);
+    me->SetValue(val);
+
+    double ul = me->GetUpperLimit();
+    double ll = me->GetLowerLimit();
+    double relU = std::abs((val - ul)/val);
+    double relL = std::abs((val - ll)/val);
+
+    if(val > ul || val < ll || relU < 0.01 || relL < 0.01)  {
+      me->SetLowerLimit(val - 3.0);
+      me->SetUpperLimit(val + 3.0);
+    }
+
+  }
+
+
+  return;
+}
+
+void Nucleus::SetMatrixElementValues(TArrayF* vals) {
+  
+  int size = matrix_elements.size();
+  if(vals->GetSize() != size) {
+    std::cout << "ME value array should have size of " << size << " (size = " << vals->GetSize() << ")." << std::endl;
+    return;
+  }
+
+  for(int i=0;i<size;i++) {
+
+    float val = vals->At(i);
+
+    MatrixElement* me = matrix_elements.at(i);
+    me->SetValue(val);
+
+    double ul = me->GetUpperLimit();
+    double ll = me->GetLowerLimit();
+    double relU = std::abs((val - ul)/val);
+    double relL = std::abs((val - ll)/val);
+
+    if(val > ul || val < ll || relU < 0.01 || relL < 0.01)  {
+      me->SetLowerLimit(val - 3.0);
+      me->SetUpperLimit(val + 3.0);
+    }
+
+  }
+  
+
+}
+
 bool Nucleus::CheckMatrixElements() const {
 
   bool good = true;
@@ -1074,7 +1135,8 @@ void Nucleus::PrintComparison(const Literature* lit) const {
   int intw = 7;
   int valw = 12;
   int errw = 18;
-  
+ 
+  std::cout << "\n##### " << name << " #####" << std::endl; 
   std::cout << std::left;
   std::cout << "\nBranching Ratios (w=" << ws[0] << ")\n";
   std::cout << std::setw(intw) << "ni" 
@@ -1206,6 +1268,7 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	      << std::setw(errw) << nSig
 	      << chi2 << "\n";
   }
+  std::cout << "##########\n" << std::endl;
 
   return;
 }

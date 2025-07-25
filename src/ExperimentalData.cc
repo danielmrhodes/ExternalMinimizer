@@ -250,8 +250,8 @@ void ExperimentalData::GenerateAllData(Nucleus* nuc, TF1* eff_curve, double scal
       std::vector<int> indsF = yldI->GetFinalIndices();
       int ni = indsI.at(0);
       int nf = indsF.at(0);
-
-      double egam = 1000.0*(nuc->GetLevelEnergy(ni) - nuc->GetLevelEnergy(nf));
+      
+      double egam = 1000.0*(nuc->GetLevelEnergy(ni+1) - nuc->GetLevelEnergy(nf+1));
       double eff = eff_curve->Eval(egam);
       
       double yl = scale*yldI->GetValue()*eff;

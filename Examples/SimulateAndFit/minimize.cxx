@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   Nucleus* beam = new Nucleus(beam_name);
   beam->CreateFromGosiaInputFile(); //beam_name.POIN.inp
   beam->FillFromBSTFile(); //beam_name.bst
-  beam->CheckMatrixElements();
+  beam->CheckMatrixElements(); //Checks parity and spin rules for the matrix elements
   
   std::vector<double> ensB = {0.05,0.075,0.10,0.15,0.20,0.30,0.45,0.60,0.80,1.0,1.25,1.50,1.75,2.0,2.5,3.0};
   std::vector<double> ccB1 = {1.732,0.599,0.276,0.0916,0.0423,0.01471,0.00549,0.00288,0.001588,0.001032,0.000736,0.000709,0.000783,
@@ -24,8 +24,8 @@ int main(int argc, char** argv) {
   beam->SetConverionCoefficients(3,ensB,ccB3);
   
   beam->PrintAll();
-  //beam->Write(148,62);
-  //beam->WriteLevelScheme();
+  //beam->Write(148,62); //Writes a Cygnus nucleus file
+  //beam->WriteLevelScheme(); //Writes a G4CLX level scheme file
   
   Literature* beam_lit = new Literature(beam_name);
   beam_lit->CreateFromFile(); //beam_name.lit
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   //Gamma-ray detection efficiency curve. Energy (x) in keV.
   TF1* eff = new TF1("eff","6.798*TMath::Power(x + 100.,-0.621)",10.,5000.);
 
-  //Experimental parameters
+  //Experimental parameters (change these)
   double Nav = 6.02214076*TMath::Power(10,23); //Avagadro's number
   double targ_mm = 207.98; // target molar mass (g/mol)
   double peff = 0.8; //particle detection efficiency
@@ -47,9 +47,12 @@ int main(int argc, char** argv) {
   double mtm = 1.0; //measurement time (days)
   double rate = 6.0*TMath::Power(10,8); //beam rate (pps)
   double sa = 4.0*TMath::Pi(); //germanium solid angle (sr)
+  //
   
   double scale = TMath::Power(10,-30)*24*60*60*mtm*rate*sa*peff*coincLT*Nav/targ_mm;
-  beam_data->GenerateAllData(beam,eff,scale,2000);
+
+  double thresh = 2000.0; //Transitions with less than this number of *counts* will be skipped
+  beam_data->GenerateAllData(beam,eff,scale,thresh);
   beam_data->WriteDataFile(148,62); //writes to beam_name.yld
   
   delete beam;
@@ -63,7 +66,7 @@ int main(int argc, char** argv) {
  
   //Read in data
   beam_data->ReadDataFile(); //beam_name.yld
-  beam_data->Correct();
+  beam_data->Correct(); //Corrects experimental data for integration over angle and energy
 
   int numE = beam_data->Size();
   int numY = beam_data->GetNumRawData();
@@ -86,7 +89,7 @@ int main(int argc, char** argv) {
   mini->SetBeamData(beam_data);
   
   //Leaving out Rutherford CS term, which is different from how GOSIA does it
-  mini->LinkBeamExperiments(1,2);
+  mini->LinkBeamExperiments(1,2); //experiment 1, experiment 2 (scales exp2 to exp1. exp2 > exp1)
   mini->LinkBeamExperiments(1,3);
   mini->LinkBeamExperiments(1,4);
   mini->LinkBeamExperiments(1,5);

@@ -5,9 +5,11 @@
 int main(int argc, char** argv) {
 
   std::string beam_name = "kr78";
+  
   Nucleus* beam = new Nucleus(beam_name);
   beam->CreateFromGosiaInputFile(); //beam_name.POIN.inp
   beam->FillFromBSTFile(); //beam_name.bst
+  beam->CheckMatrixElements(); //Checks parity and spin rules for the matrix elements
   
   //For conversion coefficients
   std::vector<double> ensB = {0.30,0.35,0.40,0.45,0.50,0.60,0.70,0.80,0.90,1.00,1.25,1.50,1.75,2.00,2.25,2.50,2.75,3.00};
@@ -20,8 +22,11 @@ int main(int argc, char** argv) {
   
   beam->SetConverionCoefficients(1,ensB,ccB1); //mult, energies, coefficients
   beam->SetConverionCoefficients(2,ensB,ccB2);
-  beam->SetConverionCoefficients(7,ensB,ccB7); 
+  beam->SetConverionCoefficients(7,ensB,ccB7);
+  
   beam->PrintAll();
+  //beam->Write(78,36); //Writes a Cygnus nucleus file
+  //beam->WriteLevelScheme(); //Writes a G4CLX level scheme file
   
   Literature* beam_lit = new Literature(beam_name);
   beam_lit->CreateFromFile(); //beam_name.lit
@@ -29,7 +34,7 @@ int main(int argc, char** argv) {
   ExperimentalData* beam_data = new ExperimentalData(beam_name);
   beam_data->ReadGosiaFiles(); //beam_name.POIN.inp, beam_name.POIN.out, beam_name.INTI.out
   beam_data->ReadDataFile(); //beam_name.yld
-  beam_data->Correct();
+  beam_data->Correct(); //Corrects experimental data for integration over angle and energy
   
   std::string targ1_name = "pt196";
   Nucleus* targ1 = new Nucleus(targ1_name);

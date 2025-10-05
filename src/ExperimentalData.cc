@@ -172,7 +172,12 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
 	
 	double ydat = rand.PoissonD(yl);
 	double err = TMath::Sqrt(ydat);
-
+	/*
+	double rel_err = err/ydat;
+	if(rel_err < 0.01)
+	  rel_err = 0.01;
+	err = rel_err*ydat; 
+	*/
 	ydat /= eff;
 	err /= eff;	
 
@@ -198,7 +203,12 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
 
 	double ydat1 = rand.PoissonD(y1);
 	double err1 = TMath::Sqrt(ydat1);
-
+	/*
+	double rel_err1 = err1/ydat1;
+	if(rel_err1 < 0.01)
+	  rel_err1 = 0.01;
+	err1 = rel_err1*ydat1; 
+	*/
 	ydat1 /= eff1;
         err1 /= eff1;
 	
@@ -210,7 +220,12 @@ void ExperimentalData::GenerateData(std::string file_name, Nucleus* nuc, TF1* ef
 	
 	double ydat2 = rand.PoissonD(y2);
 	double err2 = TMath::Sqrt(ydat2);
-	
+	/*
+	double rel_err2 = err2/ydat2;
+	if(rel_err2 < 0.01)
+	  rel_err2 = 0.01;
+	err2 = rel_err2*ydat2; 
+	*/
 	ydat2 /= eff2;
         err2 /= eff2;
 
@@ -260,7 +275,12 @@ void ExperimentalData::GenerateAllData(Nucleus* nuc, TF1* eff_curve, double scal
 
       double ydat = rand.PoissonD(yl);
       double err = TMath::Sqrt(ydat);
-
+      /*
+      double rel_err = err/ydat;
+      if(rel_err < 0.01)
+	rel_err = 0.01;
+      err = rel_err*ydat;  
+      */
       ydat /= eff;
       err /= eff;
 
@@ -732,7 +752,7 @@ void ExperimentalData::RecorrectExp(int exp_num, double scale) {
 }
 
 void ExperimentalData::PrintComparison() const {
-
+  
   for(int i=0;i<data.size();++i) {
     Experiment* exp = data.at(i);
     exp->PrintComparison(name,scalings.at(i),factors.at(i));

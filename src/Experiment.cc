@@ -83,6 +83,31 @@ void Experiment::ZeroPointYields() {
   return;
 }
 
+void Experiment::AddMultiplet(std::vector<int> nis, std::vector<int> nfs, double val, double errU, double errD, double weight) {
+
+  int size = nis.size();
+  if(size != nfs.size()) {
+    std::cout << "Initial and final index vectors don't have the same size!" << std::endl;
+    return;
+  }
+
+  YieldError* yld = new YieldError();
+  yld->SetValue(val);
+  yld->SetErrorUp(errU);
+  yld->SetErrorDown(errD);
+  yld->SetWeight(weight);
+   
+  for(int i=0;i<size;i++) {
+    yld->AddInitialIndex(nis[i]-1);
+    yld->AddFinalIndex(nfs[i]-1);
+  }
+
+  AddRawData(yld);
+  
+  return;
+
+}
+
 Yield* Experiment::GetPointYield(int ni, int nf) const {
 
   for(Yield* y : point_yields_all)

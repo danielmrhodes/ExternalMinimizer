@@ -27,8 +27,10 @@ class GosiaMinimizerFCN {
   void CreateNTuple();
   void FillFactors();
   void Write();
+  std::vector<double>  CalculateScalingParameters();
   
   bool fixed;
+  bool calculated;
   double chi_cut;
   
   Nucleus* beam;
@@ -42,7 +44,7 @@ class GosiaMinimizerFCN {
   std::vector<ExperimentalData*> target_data;
 
   std::vector<int> indices; //list of which free scaling parameter goes with which experiments
-  std::vector<double> scalings; //the fixed relative scaling between experiments
+  std::vector<double> rel_scalings; //the fixed relative scaling between experiments
   std::vector<double> factors; //sin(theta_det)*Dsig(thetaP) factor needed for coupling experiments
   std::vector<double> fixed_scales; //the (normally fitted) scaling parameters for each experiment
 

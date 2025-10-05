@@ -22,7 +22,8 @@ GosiaMinimizer::GosiaMinimizer(std::string meth, std::string alg) {
   limited = false;
   relCS = false;
   fixed = false;
-
+  calculated = false;
+  
   SetMethod(meth);
   SetAlgorithm(alg);
 
@@ -82,10 +83,10 @@ void GosiaMinimizer::AddTargetData(ExperimentalData* data) {
 
 void GosiaMinimizer::Resize(int size) {
 
-  int cur_size = theFCN->scalings.size();
+  int cur_size = theFCN->rel_scalings.size();
   for(int i=0;i<size;++i) {
     theFCN->indices.push_back(i + cur_size);
-    theFCN->scalings.push_back(1.0);
+    theFCN->rel_scalings.push_back(1.0);
     theFCN->factors.push_back(1.0);
   }
   
@@ -139,7 +140,7 @@ void GosiaMinimizer::SetupParameters(std::vector<double> scales) {
     }
   }
 
-  if(!theFCN->beam_data || fixed)
+  if(!theFCN->beam_data || fixed || calculated)
     return;
   
   //Minimum one free scaling parameter for experimental data
@@ -174,7 +175,9 @@ void GosiaMinimizer::LinkBeamExperiments(int exp1, int exp2, double rel) {
 void GosiaMinimizer::LinkBeamTargetExperiments(int exp1B, int numE, int target_num) {
 
   targ_info.push_back({exp1B,numE,target_num});
+  
   ExperimentalData* dataB = theFCN->beam_data;
+  ExperimentalData* dataT = theFCN->target_data[target_num-1];
 
   int first_targ_exp = dataB->Size() + 1;
   for(int i=0;i<target_num-1;++i)
@@ -187,6 +190,8 @@ void GosiaMinimizer::LinkBeamTargetExperiments(int exp1B, int numE, int target_n
   for(int i=0;i<numE;++i) {
     
     dataB->RecorrectExp(exp1B + i,scale0);
+    dataT->RecorrectExp(i+1,scale0);
+    
     LinkExperiments(exp1B + i,first_targ_exp + i,1.0);
     
   }
@@ -205,8 +210,8 @@ void GosiaMinimizer::LinkExperiments(int exp1, int exp2, double rel) {
 
   int old_ind = theFCN->indices.at(exp2-1);
 
-  theFCN->indices.at(exp2-1)= theFCN->indices.at(exp1-1);
-  theFCN->scalings.at(exp2-1) = rel;
+  theFCN->indices.at(exp2-1) = theFCN->indices.at(exp1-1);
+  theFCN->rel_scalings.at(exp2-1) = rel;
 
   for(int i=0;i<theFCN->indices.size();++i)
     if(theFCN->indices.at(i) >= old_ind)
@@ -275,14 +280,18 @@ std::vector<double> GosiaMinimizer::FindInitialScalings() {
   tmp_mini->Minimize();
   
   const double* x = tmp_mini->X();
-  UpdateScalings(x);
+  //UpdateScalings(x);
     
-  std::cout << "\nInitial Chi2: " << tmp_mini->MinValue() << std::endl;
+  std::cout << "\nInitial Chi2: " << tmp_mini->MinValue();
   
   //Record scaling parameters for future use
   std::vector<double> pars;
-  for(int i=0;i<scale_num;++i)
+  for(int i=0;i<scale_num;++i) {
     pars.push_back(x[i]);
+    if(fixed || calculated)
+      std::cout << Form("\n Scaling%02d: ",i) << pars.back();
+  }
+  std::cout << "\n" << std::endl;
 
   //Release the previously fixed matrix elements
   for(int i : beam_inds)
@@ -316,6 +325,10 @@ void GosiaMinimizer::InitialSetup() {
     scales = FindInitialScalings();
     if(fixed) {
       theFCN->fixed = true;
+      theFCN->fixed_scales = scales;
+    }
+    if(calculated) {
+      theFCN->calculated = true;
       theFCN->fixed_scales = scales;
     }
   }
@@ -556,6 +569,10 @@ void GosiaMinimizer::Minimize() {
     std::cout << ".)" << std::endl;
   }
 
+  std::vector<double> calc_scales; 
+  if(calculated)
+     calc_scales = theFCN->CalculateScalingParameters();
+  
   Nucleus* beam = theFCN->beam;
   std::string beam_name = beam->GetName();
   
@@ -595,8 +612,24 @@ void GosiaMinimizer::Minimize() {
   }
   
   std::cout << "\n";
+  if(calculated) { 
+
+    int sizeBE = theFCN->beam_data->Size();
+    int scale_num = 0;
+
+    std::cout << "Final Scalings\n";
+    for(int i=0;i<sizeBE;++i) {
+      int num = theFCN->indices[i];
+      if(num == scale_num) {
+	std::cout << Form(" Scaling%02d: ",num) << calc_scales[num] << "\n";
+	scale_num++;
+      }
+    }
+    std::cout << std::endl;
+  }
   Print();
   
+
   const double* min = mini->X();
   const double* errors = mini->Errors();
   if(validate && status == 0) {
@@ -680,25 +713,26 @@ void GosiaMinimizer::Minimize() {
     theFCN->Write();
  
   beam->FillFromBSTFile(beam_name + ".bst-minimized"); //Reset MEs to minimum  
-  if(theFCN->beam_data && !fixed)
-    UpdateScalings(min);
+  //if(theFCN->beam_data && !fixed && !calculated)
+  //UpdateScalings(min);
   
   return;
 }
 
+/*
 void GosiaMinimizer::UpdateScalings(const double* x) {
   
   int numM = theFCN->beam->GetNumFree();
   for(Nucleus* targ : theFCN->targets)
     numM += targ->GetNumFree();
-
+  
   int numE_beam = 0;
   if(theFCN->beam_data) {
     numE_beam += theFCN->beam_data->Size();
 
     std::vector<double> scales;
     for(int i=0;i<numE_beam;++i)
-      scales.push_back(theFCN->scalings.at(i)*x[numM + theFCN->indices.at(i)]);
+      scales.push_back(theFCN->rel_scalings.at(i)*x[numM + theFCN->indices.at(i)]);
     
     theFCN->beam_data->SetScalings(scales);
 
@@ -712,7 +746,7 @@ void GosiaMinimizer::UpdateScalings(const double* x) {
     
     std::vector<double> scales;
     for(int j=0;j<size;++j)
-      scales.push_back(theFCN->scalings.at(numE_beam + numE_targs + j)*x[numM + theFCN->indices.at(numE_beam + numE_targs + j)]);
+      scales.push_back(theFCN->rel_scalings.at(numE_beam + numE_targs + j)*x[numM + theFCN->indices.at(numE_beam + numE_targs + j)]);
     
     dataT->SetScalings(scales);
     
@@ -721,3 +755,4 @@ void GosiaMinimizer::UpdateScalings(const double* x) {
 
   return;
 }
+*/

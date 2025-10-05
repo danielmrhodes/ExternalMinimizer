@@ -33,6 +33,8 @@ class Experiment {
   double GetThetaMax() const {return tmax;}
   double GetRutherfordCS() const {return cs;}
 
+  void AddMultiplet(std::vector<int> nis, std::vector<int> nfs, double val, double errU, double errD, double weight);
+
   Yield* GetPointYield(int ni, int nf) const;
   Yield* GetIntiYield(int ni, int nf) const;
 

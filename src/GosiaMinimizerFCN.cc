@@ -8,7 +8,8 @@ GosiaMinimizerFCN::GosiaMinimizerFCN() {
   
   chi_cut = 1.0;
   fixed = false;
-  
+  calculated = false;
+
   beam = NULL;
   beam_lit = NULL;
   beam_data = NULL;
@@ -19,13 +20,82 @@ GosiaMinimizerFCN::GosiaMinimizerFCN() {
   target_data.clear();
 
   indices.clear();
-  scalings.clear();
+  rel_scalings.clear();
   factors.clear();
+  fixed_scales.clear();
 
   return;
 
 }
 GosiaMinimizerFCN::~GosiaMinimizerFCN() {;}
+
+std::vector<double> GosiaMinimizerFCN::CalculateScalingParameters() {
+  
+  int size = rel_scalings.size();
+  std::vector<double> numes(size,0);
+  std::vector<double> denoms(size,0);
+
+  int numE_beam = beam_data->Size();
+  for(int i=0;i<numE_beam;++i) {
+    
+    Experiment* exp = beam_data->data[i];
+    double rel = rel_scalings[i];
+    int num = indices[i];
+    double fac = factors[i];
+    
+    for(int j=0;j<exp->data_corr.size();++j) {
+      
+      YieldError* yldC = exp->data_corr[j];
+      double yc = yldC->GetValue();
+      double sig = 0.5*(yldC->GetErrorDown() + yldC->GetErrorUp());
+      
+      Yield* yldP = exp->point_yields[j];
+      double yp = yldP->GetValue()/fac; //???
+      
+      numes[num] += rel*yp*yc/(sig*sig);
+      denoms[num] += TMath::Power(rel*yp/sig,2.0);
+      
+    }
+  }
+
+  int numE_targs = 0;
+  for(int i=0;i<target_data.size();++i) {
+    
+    ExperimentalData* dataT = target_data[i];
+    int size = dataT->Size();
+
+    for(int j=0;j<size;++j) {
+      
+      Experiment* exp = dataT->data[j];
+    
+      double rel = rel_scalings[numE_beam + numE_targs + j];
+      int num = indices[numE_beam + numE_targs + j];
+      double fac = factors[numE_beam + numE_targs + j];
+      
+      for(int k=0;k<exp->data_corr.size();++k) {
+      
+	YieldError* yldC = exp->data_corr[k];
+	double yc = yldC->GetValue();
+	double sig = 0.5*(yldC->GetErrorDown() + yldC->GetErrorUp());
+	
+	Yield* yldP = exp->point_yields[k];  
+	double yp = yldP->GetValue()/fac; //???
+
+	numes[num] += rel*yp*yc/(sig*sig);
+	denoms[num] += TMath::Power(rel*yp/sig,2.0);
+
+      }
+    }
+    numE_targs += size;
+  }
+
+  std::vector<double> scales(size,0);
+  for(int i=0;i<size;++i)
+    scales[i] = numes[i]/denoms[i];
+
+  return scales;
+
+}
 
 double GosiaMinimizerFCN::operator() (const double* pars) {
 
@@ -103,6 +173,11 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
     }
   }
 
+  //Calculate scaling parameters with new yields if requested
+  std::vector<double> calc_scales;
+  if(calculated)
+    calc_scales = CalculateScalingParameters();
+
   //Calculate yield chi2 for beam
   double yld_chi2_beam = 0.0;
   int numE_beam = 0;
@@ -113,16 +188,19 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       
       Experiment* exp = beam_data->data[i];
     
-      double rel = scalings[i];
+      double rel = rel_scalings[i];
       int num = indices[i];
       double fac = factors[i];
       
       double scale;
       if(fixed)
 	scale = rel*fixed_scales[num];
+      else if(calculated)
+	scale = rel*calc_scales[num];
       else
 	scale = rel*pars[par_num + num];    
 
+      beam_data->scalings[i] = scale;
       for(int j=0;j<exp->data_corr.size();++j) {
       
 	YieldError* yldC = exp->data_corr[j];
@@ -154,16 +232,19 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       
       Experiment* exp = dataT->data[j];
     
-      double rel = scalings[numE_beam + numE_targs + j];
+      double rel = rel_scalings[numE_beam + numE_targs + j];
       int num = indices[numE_beam + numE_targs + j];
       double fac = factors[numE_beam + numE_targs + j];
       
       double scale;
       if(fixed)
 	scale = rel*fixed_scales[num];
+      else if(calculated)
+	scale = rel*calc_scales[num];
       else
 	scale = rel*pars[par_num + num]; 
 
+      dataT->scalings[j] = scale;
       for(int k=0;k<exp->data_corr.size();++k) {
       
 	YieldError* yldC = exp->data_corr[k];
@@ -204,7 +285,6 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
     ntuple->Fill(&output[0]);
   }
   
-  //std::cout << yld_chi2_beam << std::endl;
   return yld_chi2_beam + lit_chi2_beam + yld_chi2_targs + lit_chi2_targs;
 
 }

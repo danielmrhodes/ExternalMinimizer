@@ -1,4 +1,5 @@
 #include "Nucleus.h"
+#include "BrIccReader.h"
 #include "TMath.h"
 #include "TString.h"
 #include "Math/SpecFuncMathMore.h"
@@ -647,6 +648,39 @@ void Nucleus::SetConverionCoefficients(int mult, std::vector<double> ens, std::v
   return;
 }
 
+void Nucleus::SetICC(int Z, std::string idxpath, std::string iccpath) {
+  
+   BrIccReader bricc(idxpath,iccpath);
+   //int bricc_lambda[8] = {0,1,2,3,4,-1,5,6};  //BRICC does not have E6 conversion, so M1 and M2 are indices 5 and 6
+
+   for(int i=0;i<8;i++) {
+     if(i==5)
+       continue;
+
+     delete convCoeffs[i];
+     convCoeffs[i] = NULL;
+     
+     int mult = i;
+     if(i > 5)
+       mult -= 1;
+
+     int num = 100;
+     TGraph* g = new TGraph(num);
+     for(int j=0;j<num;j++) {
+
+       double en = (4000./num)*j;
+       double cc = bricc.GetTotalCC(Z,en,mult);
+
+       g->SetPoint(j,en/1000.,cc);
+
+     }
+     convCoeffs[i] = g;
+
+   }
+
+  return;
+}
+
 std::vector<float> Nucleus::GetMatrixElementValues() const {
 
   std::vector<float> vals;
@@ -1148,6 +1182,8 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	    << std::setw(errw) << "nSig"  
 	    << "Chi2\n";
   
+  double sumBR = 0.0;
+  int numBR = 0;
   for(LitVal* lv : lit->GetBranchingRatios()) {
     
     int ni = lv->GetInitialIndex();
@@ -1171,8 +1207,14 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	      << std::setw(errw) << err
 	      << std::setw(errw) << nSig
 	      << chi2 << "\n";
+
+    sumBR += chi2;
+    numBR++;
+    
   }
- 
+  if(numBR > 0)
+    std::cout << "\n\t*** Sum Chi2 = " << sumBR << " (Chi2/numBR = " << sumBR/numBR << ")" << std::endl;
+  
   std::cout << "\nLifetimes (w=" << ws[1] << ")\n";
   std::cout << std::setw(intw) << "index" 
 	    << std::setw(valw) << "Calc" 
@@ -1181,6 +1223,8 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	    << std::setw(errw) << "nSig"  
 	    << "Chi2\n";
   
+  double sumLT = 0.0;
+  int numLT = 0;
   for(LitVal* lv : lit->GetLifetimes()) {
     
     int index = lv->GetInitialIndex();
@@ -1200,7 +1244,12 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	      << std::setw(errw) << err
 	      << std::setw(errw) << nSig
 	      << chi2 << "\n";
+
+    sumLT += chi2;
+    numLT++;
   }
+  if(numLT > 0)
+    std::cout << "\n\t*** Sum Chi2 = " << sumLT << " (Chi2/numLT = " << sumLT/numLT << ")" << std::endl;
   
   std::cout << "\nMixing Ratios (w=" << ws[2] << ")\n";
   std::cout << std::setw(intw) << "ni" 
@@ -1211,6 +1260,8 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	    << std::setw(errw) << "nSig"  
 	    << "Chi2\n";
   
+  double sumDL = 0.0;
+  int numDL = 0;
   for(LitVal* lv : lit->GetMixingRatios()) {
     
     int ni = lv->GetInitialIndex();
@@ -1232,8 +1283,13 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	      << std::setw(errw) << err
 	      << std::setw(errw) << nSig
 	      << chi2 << "\n";
-  }
 
+    sumDL += chi2;
+    numDL++;
+  }
+  if(numDL > 0)
+    std::cout << "\n\t*** Sum Chi2 = " << sumDL << " (Chi2/numDL = " << sumDL/numDL << ")" << std::endl;
+  
   std::cout << "\nMatrix Elements (w=" << ws[3] << ")\n";
   std::cout << std::setw(intw) << "mult" 
 	    << std::setw(intw) << "n1" 
@@ -1244,6 +1300,8 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	    << std::setw(errw) << "nSig"  
 	    << "Chi2\n";
   
+  double sumME = 0.0;
+  int numME = 0;
   for(LitVal* lv : lit->GetMatrixElements()) {
 
     int n1 = lv->GetInitialIndex();
@@ -1267,7 +1325,18 @@ void Nucleus::PrintComparison(const Literature* lit) const {
 	      << std::setw(errw) << err
 	      << std::setw(errw) << nSig
 	      << chi2 << "\n";
+    
+    sumME += chi2;
+    numME++;
   }
+  if(numME > 0)
+    std::cout << "\n\t*** Sum Chi2 = " << sumME << " (Chi2/numME = " << sumME/numME << ")" << std::endl;
+
+  double num = numBR + numLT + numDL + numME;
+  double sum = sumBR + sumLT + sumDL + sumME;
+  if(num > 0)
+    std::cout << "\n*** Literature Sum Chi2 = " << sum << " (Chi2/num = " << sum/num << ")" << std::endl;
+
   std::cout << "##########\n" << std::endl;
 
   return;

@@ -30,6 +30,7 @@ class Nucleus {
   void FixAll();
 
   void SetConverionCoefficients(int mult, std::vector<double> ens, std::vector<double> ccs);
+  void SetICC(int Z, std::string idxpath, std::string iccpath);
 
   void PrintLevels() const;
   void PrintLifetimes() const;

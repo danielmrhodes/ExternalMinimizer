@@ -257,11 +257,11 @@ double Nucleus::CompareWithLiterature(const Literature* lit) const {
   std::vector<double> ws = lit->GetWeights();
   double chi2 = 0.0;
   
-  for(LitVal* lv : lit->GetLifetimes())
-    chi2 += ws[0]*CompareLifetime(lv);
-  
   for(LitVal* lv : lit->GetBranchingRatios())
-    chi2 += ws[1]*CompareBranchingRatio(lv);
+    chi2 += ws[0]*CompareBranchingRatio(lv);
+
+  for(LitVal* lv : lit->GetLifetimes())
+    chi2 += ws[1]*CompareLifetime(lv);
 
   for(LitVal* lv : lit->GetMixingRatios())
     chi2 += ws[2]*CompareMixingRatio(lv);

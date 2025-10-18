@@ -61,6 +61,11 @@ double Nucleus::DecayLifetime(int mult, double me, double spin, double egam) con
 
     //return 1748.55/(TMath::Power(egam,7.0)*bsl);
     return 1760.0/(TMath::Power(egam,7.0)*bsl);
+
+  case 4:
+    
+    //check
+    return 5880.425/(TMath::Power(egam,9.0)*bsl/10000.);
     
   case 7:
 
@@ -650,34 +655,59 @@ void Nucleus::SetConverionCoefficients(int mult, std::vector<double> ens, std::v
 
 void Nucleus::SetICC(int Z, std::string idxpath, std::string iccpath) {
   
-   BrIccReader bricc(idxpath,iccpath);
-   //int bricc_lambda[8] = {0,1,2,3,4,-1,5,6};  //BRICC does not have E6 conversion, so M1 and M2 are indices 5 and 6
+  std::vector<double> energies;
+  for(MatrixElement* me : matrix_elements) {
+    
+    int n1 = me->GetIndex1();
+    int n2 = me->GetIndex2();
+    if(n1 == n2)
+      continue;
+    
+    double en1 = levels.at(n1)->GetEnergy();
+    double en2 = levels.at(n2)->GetEnergy();
+    double egam = TMath::Abs(1000.*(en1 - en2));
+    energies.push_back(egam);
+  }
+  int num = energies.size();
+  
+  BrIccReader bricc(idxpath,iccpath);
+  //int bricc_lambda[8] = {0,1,2,3,4,-1,5,6};  //BRICC does not have E6 conversion, so M1 and M2 are indices 5 and 6
+  
+  for(int i=0;i<8;i++) {
+    if(i==5)
+      continue;
+    
+    delete convCoeffs[i];
+    convCoeffs[i] = NULL;
+    
+    int mult = i;
+    if(i > 5)
+      mult -= 1;
+    
+    TGraph* g = new TGraph();
+    g->SetName(Form("CC%d",i+1));
+    
+    for(int j=0;j<num;j++) {
+      
+      double en = energies.at(j); 
+      double en1 = en - 1.0; 
+      double en2 = en + 1.0; 
 
-   for(int i=0;i<8;i++) {
-     if(i==5)
-       continue;
-
-     delete convCoeffs[i];
-     convCoeffs[i] = NULL;
-     
-     int mult = i;
-     if(i > 5)
-       mult -= 1;
-
-     int num = 100;
-     TGraph* g = new TGraph(num);
-     for(int j=0;j<num;j++) {
-
-       double en = (4000./num)*j;
-       double cc = bricc.GetTotalCC(Z,en,mult);
-
-       g->SetPoint(j,en/1000.,cc);
-
-     }
-     convCoeffs[i] = g;
-
-   }
-
+      double cc = bricc.GetTotalCC(Z,en,mult);
+      double cc1 = bricc.GetTotalCC(Z,en1,mult);
+      double cc2 = bricc.GetTotalCC(Z,en2,mult);
+      
+      g->SetPoint(g->GetN(),en1/1000.,cc);
+      g->SetPoint(g->GetN(),en/1000.,cc);
+      g->SetPoint(g->GetN(),en2/1000.,cc);
+      
+    }
+    g->Sort();
+    
+    convCoeffs[i] = g;
+    
+  }
+  
   return;
 }
 
@@ -1124,13 +1154,21 @@ void Nucleus::PrintGammaTransitions() const {
 	    l=2;
 	}
 	
-	if(lvals.at(0) > lvals.at(1))
+	double frac0;
+	double frac1;
+	if(lvals.at(0) > lvals.at(1)) {
 	  del = sign*TMath::Sqrt(taups.at(1)/taups.at(0));
-	else
+	  frac0 = del*del/(1. + del*del);
+	  frac1 = 1./(1. + del*del);
+	}
+	else {
 	  del = sign*TMath::Sqrt(taups.at(0)/taups.at(1));
+	  frac1 = del*del/(1. + del*del);
+	  frac0 = 1./(1. + del*del);
+	}
 
-	double frac0 = del*del/(1. + del*del);
-	double frac1 = 1./(1. + del*del);
+	//double frac0 = del*del/(1. + del*del);
+	//double frac1 = 1./(1. + del*del);
 
 	cc = frac0*convCoeffs[mult0-1]->Eval(egam) + frac1*convCoeffs[mult1-1]->Eval(egam);
       }

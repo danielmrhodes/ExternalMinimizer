@@ -295,7 +295,7 @@ void Experiment::PrintRawAndCorrData(std::string name) const {
   return;
 }
 
-void Experiment::PrintComparison(std::string name, double scale, double factor) const {
+void Experiment::PrintComparison(std::string name, double scale, double factor, int nrm_index) const {
 
   int size = data_raw.size();
 
@@ -369,7 +369,50 @@ void Experiment::PrintComparison(std::string name, double scale, double factor) 
 
   }
   
-  std::cout << "\n\t*** Sum Chi2 = " << sub_total << " (Chi2/numY = " << sub_total/size << ")" << std::endl;
+  //Upper limit chi2 contribution
+  double ref_val = point_yields_all[nrm_index]->GetValue();
+  int ref_ni = point_yields_all[nrm_index]->GetInitialIndices()[0];
+  int ref_nf = point_yields_all[nrm_index]->GetFinalIndices()[0];
+      
+  for(int j=0;j<point_yields_all.size();++j) {
+    if(j == nrm_index)
+      continue;
+	
+    Yield* yldP = point_yields_all[j];
+    int ni = yldP->GetInitialIndices()[0];
+    int nf = yldP->GetFinalIndices()[0];
+
+    //Skip observed yields
+    bool skip = false;
+    for(YieldError* yldC : data_corr) {
+	  
+      std::vector<int> nis = yldC->GetInitialIndices();
+      std::vector<int> nfs = yldC->GetFinalIndices();
+      for(int k=0;k<nis.size();++k) {
+	if(ni == nis[k] && nf == nfs[k]) {
+	  skip = true;
+	  break;
+	}
+      }
+      if(skip)
+	break;
+    }
+    if(skip)
+      continue;
+	
+    double val = yldP->GetValue();
+    double thr = yldP->GetThreshold();
+
+    if(val/ref_val > thr) {
+      double upl_chi2 = TMath::Power((val/ref_val - thr)/thr,2.0);
+      sub_total += upl_chi2;
+
+      std::cout << "  ***UPL! Y(" << ni+1 << "->" << nf+1 << ")/Y(" << ref_ni+1 << "->" << ref_nf+1 << ") = " << val/ref_val << " (chi2 = " << upl_chi2 << ")***\n";  
+    }
+  }
+
+  std::cout << "\n\t*** Sum Chi2 = " << sub_total << " (Chi2/numY = " << sub_total/size << ")" 
+	    << std::endl;
   
   return;
 }

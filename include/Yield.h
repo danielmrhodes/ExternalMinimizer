@@ -13,16 +13,20 @@ class Yield {
   void AddInitialIndex(int ind) {nis.push_back(ind);}
   void AddFinalIndex(int ind) {nfs.push_back(ind);}
   void SetValue(double yl) {yld = yl;}
+  void SetThreshold(double th) {thresh = th;}
 
   int Size() const {return nis.size();}
+  double GetValue() const {return yld;}
+  double GetThreshold() const {return thresh;}
+
   std::vector<int> GetInitialIndices() const {return nis;}
   std::vector<int> GetFinalIndices() const {return nfs;}
-  double GetValue() const {return yld;}
+  
     
  private:
 
   std::vector<int> nis, nfs;
-  double yld;
+  double yld, thresh;
 
 };
 
@@ -30,8 +34,8 @@ class YieldError : public Yield {
 
  public:
   
-  YieldError() : Yield() {;}
-  ~YieldError() {;}
+  YieldError();
+  ~YieldError();
 
   void SetErrorUp(double er) {erUp = er;}
   void SetErrorDown(double er) {erDn = er;}

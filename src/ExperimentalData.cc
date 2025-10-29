@@ -1,6 +1,8 @@
 #include "ExperimentalData.h"
+#include "TFile.h"
 #include "TMath.h"
 #include "TRandom3.h"
+#include "TGraphAsymmErrors.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -751,11 +753,122 @@ void ExperimentalData::RecorrectExp(int exp_num, double scale) {
   return;
 }
 
+void ExperimentalData::WriteYieldGraphs(std::string file_name) {
+
+  
+  std::map<std::array<int,2>,int> ind_map;
+  std::vector<TGraph*> graphsC;
+  std::vector<TGraphAsymmErrors*> graphsE;
+  std::vector<TGraph*> graphsZ;
+  
+  int num = 0;
+  for(int i=0;i<data.size();++i) {
+    
+    Experiment* exp = data.at(i);
+    double scale = scalings.at(i);
+    double factor = factors.at(i);
+    
+    std::vector<YieldError*> corr_yields = exp->GetCorrectedData();
+    std::vector<Yield*> calc_yields = exp->GetPointYields();
+    int size = corr_yields.size();
+
+    for(int j=0;j<size;j++) {
+      
+      YieldError* yldC = corr_yields.at(j);
+      std::vector<int> nis = yldC->GetInitialIndices();
+      std::vector<int> nfs = yldC->GetFinalIndices();
+      
+      if(nis.size() != 1)
+	continue;
+
+      int ni = nis[0];
+      int nf = nfs[0];
+      if(ind_map.count({ni,nf}) == 0)
+	ind_map[{ni,nf}] = num++;
+      
+      int ind = ind_map[{ni,nf}];
+      if(ind == graphsC.size()) {
+	
+	graphsC.push_back(new TGraph());
+	graphsE.push_back(new TGraphAsymmErrors());
+	graphsZ.push_back(new TGraph());
+
+	graphsC.back()->SetName(Form("gC_%i_%i",ni+1,nf+1));
+	graphsE.back()->SetName(Form("gE_%i_%i",ni+1,nf+1));
+	graphsZ.back()->SetName(Form("gZ_%i_%i",ni+1,nf+1));
+
+	graphsC.back()->SetTitle(Form("Calculated yields for gamma-ray transition %i -> %i",ni+1,nf+1));
+	graphsE.back()->SetTitle(Form("Experimental yields for gamma-ray transition %i -> %i",ni+1,nf+1));
+	graphsZ.back()->SetTitle(Form("Z-Score for gamma-ray transition %i -> %i",ni+1,nf+1));
+	
+      }
+      
+      TGraph* gC = graphsC.at(ind);
+      TGraphAsymmErrors* gE = graphsE.at(ind);
+      TGraph* gZ = graphsZ.at(ind);
+
+      double ylC = yldC->GetValue();
+      double euC = yldC->GetErrorUp();
+      double edC = yldC->GetErrorDown();
+      //double wtC = yldC->GetWeight();
+
+      int np = gE->GetN();
+      gE->SetPoint(np,i+1,ylC);
+      gE->SetPointError(np,0.0,0.0,edC,euC);
+
+      Yield* yldP = calc_yields.at(j);
+      double ylP = yldP->GetValue();
+      double calc = scale*ylP/factor;
+
+      gC->SetPoint(np,i+1,calc);
+
+      double diff = ylC - calc;
+      double nSig;
+      if(diff > 0.0)
+	nSig = diff/edC;
+      else
+	nSig = diff/euC;
+
+      gZ->SetPoint(np,i+1,nSig);
+
+    }
+  }
+
+  
+  TFile* fout = new TFile(file_name.c_str(),"RECREATE");
+  fout->cd();
+  
+  for(TGraph* g : graphsC)
+    g->Write();
+
+  for(TGraphAsymmErrors* g : graphsE)
+    g->Write();
+
+  for(TGraph* g : graphsZ)
+    g->Write();
+
+  fout->Close();
+
+  for(TGraph* g : graphsC)
+    delete g;
+  graphsC.clear();
+
+  for(TGraphAsymmErrors* g : graphsE)
+    delete g;
+  graphsE.clear();
+
+  for(TGraph* g : graphsZ)
+    delete g;
+  graphsZ.clear();
+  
+  return;
+}
+
 void ExperimentalData::PrintComparison() const {
   
   for(int i=0;i<data.size();++i) {
     Experiment* exp = data.at(i);
-    exp->PrintComparison(name,scalings.at(i),factors.at(i));
+    exp->PrintComparison(name,scalings.at(i),factors.at(i),nrm_index);
   }
   
   return;

@@ -357,7 +357,7 @@ void GosiaMinimizer::Scan(int index, double llim, double ulim, int nstep, bool i
   }
   std::string name = beam->GetName();
 
-  MatrixElement* me = beam->GetMatrixElement(index);
+  MatrixElement* me = beam->GetMatrixElement(index - 1);
   if(!me->IsFixed()) {
     std::cout << "Sanning matrix element is not fixed." << std::endl;
     return;
@@ -371,6 +371,7 @@ void GosiaMinimizer::Scan(int index, double llim, double ulim, int nstep, bool i
   
   ExperimentalData* data = theFCN->beam_data;
   std::ofstream outFile("scan.txt");
+  outFile << index << " " << llim << " " << ulim << " " << nstep << " " << int(inti) << "\n";
   
   double step = (ulim - llim)/double(nstep - 1);
   for(int i=0;i<nstep;++i) {
@@ -404,13 +405,16 @@ void GosiaMinimizer::Scan(int index, double llim, double ulim, int nstep, bool i
 	  int exp1B = info[0];
 	  int numE = info[1];
 	  int targ_num = info[2];
+	  ExperimentalData* dataT = theFCN->target_data[targ_num-1];
 	  
 	  int nrm_index = data->GetNormalizationIndex();
 	  double scale0 = data->GetExperiment(exp1B)->GetAllIntiYields().at(nrm_index)->GetValue() / 
 	    data->GetExperiment(exp1B)->GetAllPointYields().at(nrm_index)->GetValue();
 
-	  for(int j=0;j<numE;++j)  
+	  for(int j=0;j<numE;++j)  {
 	    data->RecorrectExp(exp1B + j,scale0);
+	    dataT->RecorrectExp(j+1,scale0);
+	  }
 	  
 	}
       }
@@ -443,8 +447,8 @@ void GosiaMinimizer::Scan2D(int indexX, double llimX, double ulimX, int nstepX, 
   }
   std::string name = beam->GetName();
 
-  MatrixElement* meX = beam->GetMatrixElement(indexX);
-  MatrixElement* meY = beam->GetMatrixElement(indexY);
+  MatrixElement* meX = beam->GetMatrixElement(indexX - 1);
+  MatrixElement* meY = beam->GetMatrixElement(indexY - 1);
   if(!meX->IsFixed() || !meY->IsFixed()) {
     std::cout << "Sanning matrix elements are not fixed." << std::endl;
     return;
@@ -458,6 +462,8 @@ void GosiaMinimizer::Scan2D(int indexX, double llimX, double ulimX, int nstepX, 
   
   ExperimentalData* data = theFCN->beam_data;
   std::ofstream outFile("scan2D.txt");
+  outFile << indexX << " " << llimX << " " << ulimX << " " << nstepX << " " <<  indexY
+	  << " " << llimY << " " << ulimY << " " <<  nstepY << " " << int(inti) << "\n";
 
   double stepX = (ulimX - llimX)/double(nstepX - 1);
   double stepY = (ulimY - llimY)/double(nstepY - 1);  
@@ -469,6 +475,8 @@ void GosiaMinimizer::Scan2D(int indexX, double llimX, double ulimX, int nstepX, 
     for(int j=0;j<nstepY;++j) {
       
       double valY = llimY + j*stepY;
+      if(i%2)
+	valY = ulimY - j*stepY;
       meY->SetValue(valY);
       
       std::ofstream meFile((name + ".bst").c_str());
@@ -497,13 +505,16 @@ void GosiaMinimizer::Scan2D(int indexX, double llimX, double ulimX, int nstepX, 
 	    int exp1B = info[0];
 	    int numE = info[1];
 	    int targ_num = info[2];
-	    
+	    ExperimentalData* dataT = theFCN->target_data[targ_num-1];
+
 	    int nrm_index = data->GetNormalizationIndex();
 	    double scale0 = data->GetExperiment(exp1B)->GetAllIntiYields().at(nrm_index)->GetValue() / 
 	      data->GetExperiment(exp1B)->GetAllPointYields().at(nrm_index)->GetValue();
 	    
-	    for(int k=0;k<numE;++k)  
+	    for(int k=0;k<numE;++k) { 
 	      data->RecorrectExp(exp1B + k,scale0);
+	      dataT->RecorrectExp(k+1,scale0);
+	    }
 	    
 	  }
 	}
@@ -627,8 +638,8 @@ void GosiaMinimizer::Minimize() {
     }
     std::cout << std::endl;
   }
-  Print();
   
+  Print();
 
   const double* min = mini->X();
   const double* errors = mini->Errors();
@@ -715,7 +726,7 @@ void GosiaMinimizer::Minimize() {
   beam->FillFromBSTFile(beam_name + ".bst-minimized"); //Reset MEs to minimum  
   //if(theFCN->beam_data && !fixed && !calculated)
   //UpdateScalings(min);
-  
+
   return;
 }
 
@@ -726,17 +737,13 @@ void GosiaMinimizer::UpdateScalings(const double* x) {
   for(Nucleus* targ : theFCN->targets)
     numM += targ->GetNumFree();
   
-  int numE_beam = 0;
-  if(theFCN->beam_data) {
-    numE_beam += theFCN->beam_data->Size();
-
-    std::vector<double> scales;
-    for(int i=0;i<numE_beam;++i)
-      scales.push_back(theFCN->rel_scalings.at(i)*x[numM + theFCN->indices.at(i)]);
-    
-    theFCN->beam_data->SetScalings(scales);
-
-  }
+  int numE_beam = theFCN->beam_data->Size();
+  
+  std::vector<double> scales;
+  for(int i=0;i<numE_beam;++i)
+    scales.push_back(theFCN->rel_scalings.at(i)*x[numM + theFCN->indices.at(i)]);
+  
+  theFCN->beam_data->SetScalings(scales);
 
   int numE_targs = 0;
   for(int i=0;i<theFCN->target_data.size();++i) {

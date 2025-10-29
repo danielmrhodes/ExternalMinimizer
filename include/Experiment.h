@@ -12,20 +12,15 @@ class Experiment {
   Experiment();
   ~Experiment();
   
-  int GetTotalSize() const {return inti_yields_all.size();}
-  int GetRawDataSize() const {return data_raw.size();}
+  void AddMultiplet(std::vector<int> nis, std::vector<int> nfs, double val, double errU, double errD, double weight);
   void PrintAllYields(std::string name) const;
   void PrintRawData(std::string name) const;
   void PrintRawAndCorrData(std::string name) const;
-  void PrintComparison(std::string name, double scale, double factor) const;
-
-  void SetNumber(int nm) {num = nm;}
-  void SetEnergyMin(double en) {emin = en;}
-  void SetEnergyMax(double en) {emax = en;}
-  void SetThetaMin(double th) {tmin = th;}
-  void SetThetaMax(double th) {tmax = th;}
-  void SetRutherfordCS(double xs) {cs = xs;}
+  void PrintComparison(std::string name, double scale, double factor, int nrm_index) const;
   
+  int GetTotalSize() const {return inti_yields_all.size();}
+  int GetRawDataSize() const {return data_raw.size();}
+
   int GetNumber() const {return num;}
   double GetEnergyMin() const {return emin;}
   double GetEnergyMax() const {return emax;}
@@ -33,10 +28,14 @@ class Experiment {
   double GetThetaMax() const {return tmax;}
   double GetRutherfordCS() const {return cs;}
 
-  void AddMultiplet(std::vector<int> nis, std::vector<int> nfs, double val, double errU, double errD, double weight);
+  void SetNumber(int nm) {num = nm;}
+  void SetEnergyMin(double en) {emin = en;}
+  void SetEnergyMax(double en) {emax = en;}
+  void SetThetaMin(double th) {tmin = th;}
+  void SetThetaMax(double th) {tmax = th;}
+  void SetRutherfordCS(double xs) {cs = xs;}
 
-  Yield* GetPointYield(int ni, int nf) const;
-  Yield* GetIntiYield(int ni, int nf) const;
+  Yield* GetPointYield2(int ni, int nf) const {return GetPointYield(ni-1,nf-1);};
 
   std::vector<YieldError*> GetRawData() const {return data_raw;}
   std::vector<YieldError*> GetCorrectedData() const {return data_corr;}
@@ -50,6 +49,9 @@ class Experiment {
   friend class GosiaMinimizerFCN;
   
  private:
+
+  Yield* GetPointYield(int ni, int nf) const;
+  Yield* GetIntiYield(int ni, int nf) const;
 
   void AddRawData(YieldError* yld) {data_raw.push_back(yld);}
   void AddCorrData(YieldError* yld) {data_corr.push_back(yld);}

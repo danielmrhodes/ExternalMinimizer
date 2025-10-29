@@ -100,6 +100,9 @@ std::vector<double> GosiaMinimizerFCN::CalculateScalingParameters() {
 double GosiaMinimizerFCN::operator() (const double* pars) {
 
   int par_num = 0;
+  int nrm_ind_beam = 0;
+  if(beam_data)
+    nrm_ind_beam = beam_data->GetNormalizationIndex();
   
   if(beam->GetNumFree() > 0) {
       
@@ -216,6 +219,44 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
       
 	yld_chi2_beam += nSig*nSig*yldC->GetWeight();
 
+      }
+      
+      //Upper limit chi2 contribution
+      std::vector<Yield*> all_pnt_ylds = exp->GetAllPointYields();
+      double ref_val = all_pnt_ylds[nrm_ind_beam]->GetValue();
+      
+      for(int j=0;j<all_pnt_ylds.size();++j) {
+	if(j == nrm_ind_beam)
+	  continue;
+	
+	Yield* yldP = all_pnt_ylds[j];
+	int ni = yldP->GetInitialIndices()[0];
+	int nf = yldP->GetFinalIndices()[0];
+
+	//Skip observed yields
+	bool skip = false;
+	for(YieldError* yldC : exp->data_corr) {
+	  
+	  std::vector<int> nis = yldC->GetInitialIndices();
+	  std::vector<int> nfs = yldC->GetFinalIndices();
+	  for(int k=0;k<nis.size();++k) {
+	    if(ni == nis[k] && nf == nfs[k]) {
+	      skip = true;
+	      break;
+	    }
+	  }
+	  if(skip)
+	    break;
+	}
+	if(skip)
+	  continue;
+	
+	double val = yldP->GetValue();
+	double thr = yldP->GetThreshold();
+
+	if(val/ref_val > thr)
+	  yld_chi2_beam += TMath::Power((val/ref_val - thr)/thr,2.0);
+	  
       }
     }
   }

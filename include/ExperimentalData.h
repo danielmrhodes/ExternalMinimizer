@@ -19,6 +19,8 @@ class ExperimentalData {
 
   std::string GetName() const {return name;}
   std::vector<double> GetScalings() const {return scalings;}
+
+  std::vector<Experiment*> GetExperiments() const {return data;}
   Experiment* GetExperiment(int num) const {return data.at(num-1);}
   
   void SetNormalizationIndex(int index) {nrm_index = index;}
@@ -37,6 +39,7 @@ class ExperimentalData {
   void GenerateData(Nucleus* nuc, TF1* eff, double scale);
   void GenerateAllData(Nucleus* nuc, TF1* eff, double scale, double thresh = -1.0);
 
+  void WriteYieldGraphs(std::string file_name);
   void WriteDataFile(std::string file_name,int A, int Z);  
   void WriteDataFile(int A, int Z);
 

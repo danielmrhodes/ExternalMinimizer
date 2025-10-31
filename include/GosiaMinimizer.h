@@ -19,7 +19,7 @@ class GosiaMinimizer {
   void ValidateErrors() {mini->SetValidError(true); validate = true;}
   void CalculateMINOSErrors() {calc_unc = true;}
   void WriteParameterSpace() {write = true;}
-  void LimitMatrixElements() {limited = true;}
+  void LimitAllMatrixElements() {limited = true;}
   void IncludeRelativeCS() {relCS = true;}
   void FixScalingParameters() {fixed = true;}
   void CalculateScalingParameters() {calculated = true;}
@@ -58,7 +58,7 @@ class GosiaMinimizer {
   void Resize(int size);
   void SetupParameters(std::vector<double> scales);
   std::vector<double> FindInitialScalings();
-  //void UpdateScalings(const double* min);
+  void UpdateScalings(const double* min);
 
   bool limited; //flag to apply upper and lower limits to free MEs
   bool validate; //flag to validate symmetric errors (perform Hessian calculation)

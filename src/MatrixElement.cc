@@ -4,6 +4,13 @@
 MatrixElement::MatrixElement() {
 
   fixed = true;
+  limited = false;
+  
+  index1 = -1; 
+  index2 = -1; 
+  mult = -1;
+
+  value = 0.0;
   ulim = 4.0; 
   llim = -4.0;
 

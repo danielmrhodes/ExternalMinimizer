@@ -14,7 +14,9 @@ class Yield {
   void AddFinalIndex(int ind) {nfs.push_back(ind);}
   void SetValue(double yl) {yld = yl;}
   void SetThreshold(double th) {thresh = th;}
+  void SetObserved() {observed = true;}
 
+  bool IsObserved() const {return observed;}
   int Size() const {return nis.size();}
   double GetValue() const {return yld;}
   double GetThreshold() const {return thresh;}
@@ -25,8 +27,9 @@ class Yield {
     
  private:
 
-  std::vector<int> nis, nfs;
+  bool observed;
   double yld, thresh;
+  std::vector<int> nis, nfs;
 
 };
 

@@ -1,4 +1,6 @@
 #include "GosiaMinimizer.h"
+
+#include "Fit/ParameterSettings.h"
 #include "Math/Factory.h"
 #include "Math/Functor.h"
 #include "TString.h"
@@ -109,7 +111,7 @@ void GosiaMinimizer::SetupParameters(std::vector<double> scales) {
     double llim = me->GetLowerLimit();    
     double st = TMath::Abs(val/1000.0);
     
-    if(limited)
+    if(limited || me->IsLimited())
       mini->SetLimitedVariable(par_num,Form("beamME%02d",i+1),val,st,llim,ulim);
     else
       mini->SetVariable(par_num,Form("beamME%02d",i+1),val,st);
@@ -131,7 +133,7 @@ void GosiaMinimizer::SetupParameters(std::vector<double> scales) {
       double llim = me->GetLowerLimit();    
       double st = TMath::Abs(val/1000.0);
       
-      if(limited)
+      if(limited || me->IsLimited())
 	mini->SetLimitedVariable(par_num,Form("targ%dME%02d",i+1,j+1),val,st,llim,ulim);
       else
 	mini->SetVariable(par_num,Form("targ%dME%02d",i+1,j+1),val,st);
@@ -555,8 +557,19 @@ void GosiaMinimizer::Minimize() {
   mini->SetFunction(func);
   
   std::cout << size << " free parameters" << std::endl;;
-  for(int i=0;i<size;++i)
-    std::cout << " Par" << i << " " << mini->VariableName(i) << ": " << mini->X()[i] << std::endl;
+  for(int i=0;i<size;++i) {
+    std::cout << " Par" << i << " " << mini->VariableName(i) << ": " << mini->X()[i];
+    
+    ROOT::Fit::ParameterSettings settings;
+    if(mini->GetVariableSettings(i,settings)) {
+      if(settings.IsBound()) {
+	double ulim = settings.UpperLimit();
+	double llim = settings.LowerLimit();
+	std::cout << " [" << llim << "," << ulim << "]";
+      }
+    }
+    std::cout << std::endl;
+  }
   std::cout << "Minimizing..." << std::flush;
   
   int status = 3;
@@ -579,7 +592,7 @@ void GosiaMinimizer::Minimize() {
       std::cout << "s";
     std::cout << ".)" << std::endl;
   }
-
+  
   std::vector<double> calc_scales; 
   if(calculated)
      calc_scales = theFCN->CalculateScalingParameters();
@@ -724,13 +737,12 @@ void GosiaMinimizer::Minimize() {
     theFCN->Write();
  
   beam->FillFromBSTFile(beam_name + ".bst-minimized"); //Reset MEs to minimum  
-  //if(theFCN->beam_data && !fixed && !calculated)
-  //UpdateScalings(min);
+  if(theFCN->beam_data && !fixed && !calculated)
+    UpdateScalings(min);
 
   return;
 }
 
-/*
 void GosiaMinimizer::UpdateScalings(const double* x) {
   
   int numM = theFCN->beam->GetNumFree();
@@ -762,4 +774,3 @@ void GosiaMinimizer::UpdateScalings(const double* x) {
 
   return;
 }
-*/

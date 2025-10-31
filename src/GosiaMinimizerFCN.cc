@@ -62,9 +62,9 @@ std::vector<double> GosiaMinimizerFCN::CalculateScalingParameters() {
   for(int i=0;i<target_data.size();++i) {
     
     ExperimentalData* dataT = target_data[i];
-    int size = dataT->Size();
+    int sizeT = dataT->Size();
 
-    for(int j=0;j<size;++j) {
+    for(int j=0;j<sizeT;++j) {
       
       Experiment* exp = dataT->data[j];
     
@@ -86,7 +86,7 @@ std::vector<double> GosiaMinimizerFCN::CalculateScalingParameters() {
 
       }
     }
-    numE_targs += size;
+    numE_targs += sizeT;
   }
 
   std::vector<double> scales(size,0);
@@ -230,10 +230,13 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
 	  continue;
 	
 	Yield* yldP = all_pnt_ylds[j];
+	if(yldP->IsObserved()) //Skip observed yields
+	  continue;
+	
+	/*
+	//Skip observed yields
 	int ni = yldP->GetInitialIndices()[0];
 	int nf = yldP->GetFinalIndices()[0];
-
-	//Skip observed yields
 	bool skip = false;
 	for(YieldError* yldC : exp->data_corr) {
 	  
@@ -250,6 +253,7 @@ double GosiaMinimizerFCN::operator() (const double* pars) {
 	}
 	if(skip)
 	  continue;
+	*/
 	
 	double val = yldP->GetValue();
 	double thr = yldP->GetThreshold();

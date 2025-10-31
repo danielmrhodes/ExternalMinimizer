@@ -379,10 +379,13 @@ void Experiment::PrintComparison(std::string name, double scale, double factor, 
       continue;
 	
     Yield* yldP = point_yields_all[j];
+    if(yldP->IsObserved()) //Skip observed yields
+      continue;
+    
+    /*
+    //Skip observed yields
     int ni = yldP->GetInitialIndices()[0];
     int nf = yldP->GetFinalIndices()[0];
-
-    //Skip observed yields
     bool skip = false;
     for(YieldError* yldC : data_corr) {
 	  
@@ -399,7 +402,10 @@ void Experiment::PrintComparison(std::string name, double scale, double factor, 
     }
     if(skip)
       continue;
-	
+    */
+    
+    int ni = yldP->GetInitialIndices()[0];
+    int nf = yldP->GetFinalIndices()[0];
     double val = yldP->GetValue();
     double thr = yldP->GetThreshold();
 

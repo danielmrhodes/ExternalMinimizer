@@ -386,7 +386,6 @@ void Nucleus::CreateFromGosiaInputFile(std::string file_name) {
   levels.clear();
   matrix_elements.clear();
   
-  //std::ifstream inFile((name+".POIN.inp").c_str());
   std::ifstream inFile(file_name.c_str());
   if(!inFile.is_open()) {
     std::cout << "Could not open Gosia input file " << file_name << "!" << std::endl;
@@ -462,6 +461,9 @@ void Nucleus::CreateFromGosiaInputFile(std::string file_name) {
     me->SetValue(val);
 
     if(gosi) {
+      if(std::abs(ulim-llim) < 1E-8)
+	llim = -ulim;
+
       me->SetLowerLimit(llim);
       me->SetUpperLimit(ulim);
     }
@@ -566,6 +568,8 @@ void Nucleus::CreateFromGosiaOutputFile(std::string file_name) {
       me->SetIndex2(n2-1);
       me->SetMultipolarity(mult);
       me->SetValue(val);
+      me->SetLowerLimit(val - 3.0);
+      me->SetUpperLimit(val + 3.0);
         
       matrix_elements.push_back(me);
     }

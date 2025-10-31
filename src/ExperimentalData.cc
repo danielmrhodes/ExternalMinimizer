@@ -63,6 +63,11 @@ void ExperimentalData::ReadDataFile(std::string file_name) {
     return;
   }
 
+  if(data.size() == 0) {
+    std::cout << "You need to read in the Gosia yields (point and integrated) before reading in experimental data" << std::endl;
+    return;
+  }
+
   for(Experiment* exp : data)
     exp->ClearRawData();
 
@@ -90,6 +95,8 @@ void ExperimentalData::ReadDataFile(std::string file_name) {
       
       YieldError* yld = new YieldError();
       if(indsI < 100) {
+	exp->GetPointYield2(indsI,indsF)->SetObserved();
+
 	yld->AddInitialIndex(indsI-1);
 	yld->AddFinalIndex(indsF-1);
       }
@@ -99,6 +106,8 @@ void ExperimentalData::ReadDataFile(std::string file_name) {
 	int ni2 = indsI%100;
 	int nf1 = indsF/100;
 	int nf2 = indsF%100;
+	exp->GetPointYield2(ni1,nf1)->SetObserved();
+	exp->GetPointYield2(ni2,nf2)->SetObserved();
 
 	yld->AddInitialIndex(ni1-1);
 	yld->AddFinalIndex(nf1-1);

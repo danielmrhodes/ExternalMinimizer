@@ -1,6 +1,7 @@
 #include "Yield.h"
 
 Yield::Yield() {
+  observed = false;
   yld = 0.0;
   thresh = 0.5;
 }
